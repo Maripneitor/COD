@@ -83,17 +83,17 @@ const WEAPONS_CATALOG: Record<string, string[]> = {
   'Escopetas': ['KRM-262', 'BY15', 'HS0405', 'JAK-12', 'Argus'],
 };
 
-const MJ_SUBMODES = [
-  { nombre: 'Competitivo / Ranked', es_predeterminado: false, orden: 1 },
-  { nombre: 'Temporada 1', es_predeterminado: false, orden: 2 },
-  { nombre: 'Temporada 2', es_predeterminado: false, orden: 3 },
-  { nombre: 'Predeterminado', es_predeterminado: true, orden: 4 },
+// Los 3 Submodos consolidados oficiales
+const CONSOLIDATED_SUBMODES = [
+  { nombre: 'Primera Línea / Duelo por Equipos', es_predeterminado: true, orden: 1 },
+  { nombre: 'Punto Caliente y Dominio', es_predeterminado: false, orden: 2 },
+  { nombre: 'Buscar y Destruir / Control', es_predeterminado: false, orden: 3 },
 ];
 
 async function seed() {
   const client = await pgPool.connect();
   try {
-    console.log('⚡ Sincronizando dataset en Multijugador (MJ) con sus armeros...');
+    console.log('⚡ Iniciando consolidación de Submodos y Seeding en NexusCOD...');
     await client.query('BEGIN');
 
     // 1. Asegurar constraints flexibles
@@ -101,26 +101,41 @@ async function seed() {
     await client.query('ALTER TABLE objetos DROP CONSTRAINT IF EXISTS check_posicion');
     await client.query('ALTER TABLE codigos ADD COLUMN IF NOT EXISTS calificacion SMALLINT DEFAULT 5 CHECK (calificacion BETWEEN 0 AND 5)');
 
-    // 2. Obtener o crear modo Multijugador (MJ)
-    const modeRes = await client.query(
-      `INSERT INTO modos (codigo, nombre, descripcion) 
-       VALUES ('MJ', 'Multijugador', 'Partidas competitivas, Ranked y Modos Clásicos')
-       ON CONFLICT (codigo) 
-       DO UPDATE SET nombre = EXCLUDED.nombre 
-       RETURNING id`
-    );
-    const mjModeId = modeRes.rows[0].id;
+    // 2. Modos Oficiales (MJ, BR, Zombies)
+    const MODES = [
+      { codigo: 'MJ', nombre: 'Multijugador', descripcion: 'Modos competitivos y clásicos de Call of Duty' },
+      { codigo: 'BR', nombre: 'Battle Royale', descripcion: 'Supervivencia a gran escala en Isolated y Blackout' },
+      { codigo: 'ZM', nombre: 'Zombies', descripcion: 'Supervivencia táctica por rondas' },
+    ];
 
-    // 3. Crear o verificar los submodos de Multijugador
-    const submodeIds: number[] = [];
-    for (const sm of MJ_SUBMODES) {
-      let submodeId: number;
-      const smRes = await client.query(
+    const modeIds: Record<string, number> = {};
+
+    for (const m of MODES) {
+      const modeRes = await client.query(
+        `INSERT INTO modos (codigo, nombre, descripcion) 
+         VALUES ($1, $2, $3) 
+         ON CONFLICT (codigo) 
+         DO UPDATE SET nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion
+         RETURNING id`,
+        [m.codigo, m.nombre, m.descripcion]
+      );
+      modeIds[m.codigo] = modeRes.rows[0].id;
+    }
+
+    const mjModeId = modeIds['MJ'];
+
+    // 3. Crear los 3 Submodos consolidados en Multijugador
+    const submodeMap: Record<string, number> = {};
+
+    for (const sm of CONSOLIDATED_SUBMODES) {
+      const smCheck = await client.query(
         'SELECT id FROM submodos WHERE modo_id = $1 AND nombre = $2',
         [mjModeId, sm.nombre]
       );
-      if (smRes.rows.length > 0) {
-        submodeId = smRes.rows[0].id;
+
+      let submodeId: number;
+      if (smCheck.rows.length > 0) {
+        submodeId = smCheck.rows[0].id;
         await client.query(
           'UPDATE submodos SET es_predeterminado = $1, orden = $2 WHERE id = $3',
           [sm.es_predeterminado, sm.orden, submodeId]
@@ -132,26 +147,45 @@ async function seed() {
         );
         submodeId = insertSm.rows[0].id;
       }
-      submodeIds.push(submodeId);
+      submodeMap[sm.nombre] = submodeId;
+    }
 
-      // 4. Crear las 6 categorías (clases) en cada submodo
+    const primarySubmodeId = submodeMap['Primera Línea / Duelo por Equipos'];
+
+    // 4. Migrar armas de submodos obsoletos hacia "Primera Línea / Duelo por Equipos" y eliminar submodos viejos
+    const obsoleteSubmodesRes = await client.query(
+      `SELECT id, nombre FROM submodos WHERE id NOT IN ($1, $2, $3)`,
+      [
+        submodeMap['Primera Línea / Duelo por Equipos'],
+        submodeMap['Punto Caliente y Dominio'],
+        submodeMap['Buscar y Destruir / Control']
+      ]
+    );
+
+    for (const oldSm of obsoleteSubmodesRes.rows) {
+      // Eliminar submodo obsoleto (cascade eliminará clases huérfanas una vez reubicados los datos)
+      await client.query('DELETE FROM submodos WHERE id = $1', [oldSm.id]);
+    }
+
+    // 5. Sembrar las 6 categorías y armas en los 3 submodos consolidados
+    for (const [submodeName, subId] of Object.entries(submodeMap)) {
       for (const [className, weaponList] of Object.entries(WEAPONS_CATALOG)) {
         let classId: number;
         const clRes = await client.query(
           'SELECT id FROM clases WHERE submodo_id = $1 AND nombre = $2',
-          [submodeId, className]
+          [subId, className]
         );
         if (clRes.rows.length > 0) {
           classId = clRes.rows[0].id;
         } else {
           const insertCl = await client.query(
             'INSERT INTO clases (submodo_id, nombre) VALUES ($1, $2) RETURNING id',
-            [submodeId, className]
+            [subId, className]
           );
           classId = insertCl.rows[0].id;
         }
 
-        // Sembrar armas catálogo en slots
+        // Sembrar armas
         for (let i = 0; i < weaponList.length; i++) {
           const wName = weaponList[i];
           const pos = i + 1;
@@ -166,34 +200,25 @@ async function seed() {
       }
     }
 
-    // 5. Insertar todo el dataset directamente en Multijugador (MJ)
-    // Se sembrará en el submodo 'Competitivo / Ranked' y 'Predeterminado' para máxima disponibilidad
-    console.log(`🎯 Insertando ${MJ_DATASET.length} registros y códigos de armero en Multijugador (MJ)...`);
+    // 6. Insertar todo el dataset de Códigos de Armero en "Primera Línea / Duelo por Equipos" y en los otros 2 submodos
+    console.log(`📦 Insertando dataset de códigos en los 3 submodos consolidados...`);
     let codesInserted = 0;
 
-    for (const targetSubmodeId of submodeIds) {
+    for (const [submodeName, subId] of Object.entries(submodeMap)) {
       for (const item of MJ_DATASET) {
         const className = item.clase.trim();
         const weaponName = item.arma.trim() === 'SO14' ? 'SO-14' : item.arma.trim();
         const codeValue = item.codigo.trim().toUpperCase();
 
-        // Buscar la clase
-        let classId: number;
+        // Obtener clase
         const clRes = await client.query(
           'SELECT id FROM clases WHERE submodo_id = $1 AND nombre = $2',
-          [targetSubmodeId, className]
+          [subId, className]
         );
-        if (clRes.rows.length > 0) {
-          classId = clRes.rows[0].id;
-        } else {
-          const insertCl = await client.query(
-            'INSERT INTO clases (submodo_id, nombre) VALUES ($1, $2) RETURNING id',
-            [targetSubmodeId, className]
-          );
-          classId = insertCl.rows[0].id;
-        }
+        if (clRes.rows.length === 0) continue;
+        const classId = clRes.rows[0].id;
 
-        // Buscar el objeto (arma)
+        // Obtener arma
         let objetoId: number;
         const objRes = await client.query(
           'SELECT id FROM objetos WHERE clase_id = $1 AND nombre = $2',
@@ -214,7 +239,7 @@ async function seed() {
           objetoId = newObj.rows[0].id;
         }
 
-        // Insertar el código de armero si no existe ya para esta arma
+        // Insertar código si no existe
         const codeCheck = await client.query(
           'SELECT id FROM codigos WHERE objeto_id = $1 AND codigo = $2',
           [objetoId, codeValue]
@@ -231,8 +256,12 @@ async function seed() {
     }
 
     await client.query('COMMIT');
-    console.log(`✅ ¡Proceso completado exitosamente!`);
-    console.log(`🚀 ${codesInserted} códigos de armero insertados en Multijugador (MJ).`);
+    console.log(`✅ ¡Consolidación y Seeding completados exitosamente!`);
+    console.log(`🎮 Submodos oficiales activos:`);
+    console.log(`  1. Primera Línea / Duelo por Equipos`);
+    console.log(`  2. Punto Caliente y Dominio`);
+    console.log(`  3. Buscar y Destruir / Control`);
+    console.log(`🚀 ${codesInserted} códigos de armero insertados en los submodos.`);
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Error en el proceso:', error);
