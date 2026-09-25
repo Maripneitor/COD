@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface QuickCopyButtonProps {
   textToCopy: string;
@@ -20,24 +21,22 @@ export default function QuickCopyButton({
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(textToCopy);
+    const success = await copyToClipboard(textToCopy);
+    if (success) {
       if (typeof window !== 'undefined' && 'vibrate' in navigator) {
         try {
-          navigator.vibrate?.(25);
+          navigator.vibrate?.(35);
         } catch (_) {}
       }
       setCopied(true);
       if (onCopied) onCopied(textToCopy);
       setTimeout(() => setCopied(false), 1500);
-    } catch (err) {
-      console.error('Failed to copy', err);
     }
   };
 
   const sizeClasses = {
     sm: 'px-2.5 py-1 min-h-[36px] text-xs',
-    md: 'w-full py-2.5 px-3.5 min-h-[44px] text-xs sm:text-sm',
+    md: 'w-full py-2.5 px-3 min-h-[44px] text-xs sm:text-sm',
     lg: 'w-full py-3 px-4 min-h-[46px] text-sm',
   }[size];
 
