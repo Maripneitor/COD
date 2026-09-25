@@ -378,8 +378,131 @@ export class PostgresCodRepository implements ICodRepository {
       console.error('Error importing data:', e);
       throw e;
     } finally {
+  async createLoadout(params: {
+    modoCodigo?: string;
+    modoId?: number;
+    categoria: string;
+    armaNombre: string;
+    submodoNombre: string;
+    codigoArmero: string;
+    calificacion?: number;
+  }): Promise<any> {
+    const { modoCodigo = 'MJ', modoId, categoria, armaNombre, submodoNombre, codigoArmero, calificacion = 5 } = params;
+    const client = await pgPool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      // 1. Resolver modo_id
+      let mId = modoId;
+      if (!mId) {
+        const mRes = await client.query(
+          'SELECT id FROM modos WHERE codigo ILIKE $1 OR nombre ILIKE $1 ORDER BY id LIMIT 1',
+          [`%${modoCodigo}%`]
+        );
+        if (mRes.rows.length > 0) {
+          mId = mRes.rows[0].id;
+        } else {
+          const firstM = await client.query('SELECT id FROM modos ORDER BY id LIMIT 1');
+          if (firstM.rows.length > 0) {
+            mId = firstM.rows[0].id;
+          } else {
+            const newM = await client.query(
+              'INSERT INTO modos (codigo, nombre, descripcion) VALUES ($1, $2, $3) RETURNING id',
+              [modoCodigo, modoCodigo, '']
+            );
+            mId = newM.rows[0].id;
+          }
+        }
+      }
+
+      // 2. Resolver submodo_id
+      let smId: number;
+      const smClean = submodoNombre.trim();
+      const smPrefix = smClean.split('/')[0].trim();
+      const smRes = await client.query(
+        'SELECT id FROM submodos WHERE modo_id = $1 AND (nombre ILIKE $2 OR nombre ILIKE $3) ORDER BY id LIMIT 1',
+        [mId, smClean, `%${smPrefix}%`]
+      );
+      if (smRes.rows.length > 0) {
+        smId = smRes.rows[0].id;
+      } else {
+        const newSm = await client.query(
+          'INSERT INTO submodos (modo_id, nombre, es_predeterminado, orden) VALUES ($1, $2, false, (SELECT COALESCE(MAX(orden), 0) + 1 FROM submodos WHERE modo_id = $1)) RETURNING id',
+          [mId, smClean]
+        );
+        smId = newSm.rows[0].id;
+      }
+
+      // 3. Resolver clase_id (Categoría de arma)
+      let clId: number;
+      const clClean = categoria.trim();
+      const clRes = await client.query(
+        'SELECT id FROM clases WHERE submodo_id = $1 AND nombre ILIKE $2 ORDER BY id LIMIT 1',
+        [smId, clClean]
+      );
+      if (clRes.rows.length > 0) {
+        clId = clRes.rows[0].id;
+      } else {
+        const newCl = await client.query(
+          'INSERT INTO clases (submodo_id, nombre) VALUES ($1, $2) RETURNING id',
+          [smId, clClean]
+        );
+        clId = newCl.rows[0].id;
+      }
+
+      // 4. Resolver objeto_id (Arma)
+      let objId: number;
+      const weaponClean = armaNombre.trim();
+      const objRes = await client.query(
+        'SELECT id FROM objetos WHERE clase_id = $1 AND nombre ILIKE $2 ORDER BY id LIMIT 1',
+        [clId, weaponClean]
+      );
+      if (objRes.rows.length > 0) {
+        objId = objRes.rows[0].id;
+      } else {
+        const posRes = await client.query(
+          'SELECT COALESCE(MAX(posicion), 0) + 1 AS next_pos FROM objetos WHERE clase_id = $1',
+          [clId]
+        );
+        const nextPos = posRes.rows[0]?.next_pos || 1;
+        const newObj = await client.query(
+          'INSERT INTO objetos (clase_id, nombre, posicion) VALUES ($1, $2, $3) RETURNING id',
+          [clId, weaponClean, nextPos]
+        );
+        objId = newObj.rows[0].id;
+      }
+
+      // 5. Insertar código
+      const codeClean = codigoArmero.trim();
+      const ratingNum = Math.min(5, Math.max(1, Number(calificacion) || 5));
+      const codeRes = await client.query(
+        'INSERT INTO codigos (objeto_id, codigo, calificacion) VALUES ($1, $2, $3) RETURNING id, codigo, calificacion',
+        [objId, codeClean, ratingNum]
+      );
+      const newCode = codeRes.rows[0];
+
+      await client.query('COMMIT');
+
+      return {
+        success: true,
+        modoId: mId,
+        submodoId: smId,
+        claseId: clId,
+        objetoId: objId,
+        codigoId: newCode.id,
+        codigo: newCode.codigo,
+        calificacion: newCode.calificacion,
+        armaNombre: weaponClean,
+        categoria: clClean,
+        submodoNombre: smClean
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
       client.release();
     }
   }
 }
+
 

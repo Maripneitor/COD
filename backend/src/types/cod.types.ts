@@ -60,5 +60,14 @@ export interface ICodRepository {
   deleteClass?(id: number): Promise<boolean>;
   deleteObject(id: number): Promise<boolean>;
   deleteCodigo(id: number): Promise<boolean>;
+  createLoadout?(params: {
+    modoCodigo?: string;
+    modoId?: number;
+    categoria: string;
+    armaNombre: string;
+    submodoNombre: string;
+    codigoArmero: string;
+    calificacion?: number;
+  }): Promise<any>;
   importData?(data: IModo[]): Promise<boolean>;
 }

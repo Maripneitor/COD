@@ -234,6 +234,71 @@ getRepository().then(repositoryInstance => {
     }
   });
 
+  // POST: Registrar nueva arma / armero / loadout completo con jerarquía y calificación
+  const handleCreateLoadout = async (req: Request, res: Response) => {
+    try {
+      const {
+        modoCodigo,
+        modo_codigo,
+        modo,
+        modoId,
+        modo_id,
+        categoria,
+        category,
+        clase,
+        claseNombre,
+        armaNombre,
+        arma_nombre,
+        arma,
+        weapon,
+        weaponName,
+        submodoNombre,
+        submodo_nombre,
+        submodo,
+        codigoArmero,
+        codigo_armero,
+        codigo,
+        code,
+        calificacion,
+        rating,
+        stars
+      } = req.body;
+
+      const finalModoCodigo = modoCodigo || modo_codigo || (typeof modo === 'string' ? modo : 'MJ');
+      const finalModoId = modoId || modo_id;
+      const finalCategoria = categoria || category || clase || claseNombre || 'Fusiles de Asalto';
+      const finalArmaNombre = armaNombre || arma_nombre || arma || weapon || weaponName;
+      const finalSubmodoNombre = submodoNombre || submodo_nombre || submodo || 'Primera Línea / Duelo por Equipos';
+      const finalCodigoArmero = codigoArmero || codigo_armero || codigo || code;
+      const finalCalificacion = calificacion !== undefined ? Number(calificacion) : (rating !== undefined ? Number(rating) : (stars !== undefined ? Number(stars) : 5));
+
+      if (!finalArmaNombre || !finalCodigoArmero) {
+        return res.status(400).json({ error: 'El nombre del arma y el código de armero son obligatorios.' });
+      }
+
+      if (repo.createLoadout) {
+        const result = await repo.createLoadout({
+          modoCodigo: finalModoCodigo,
+          modoId: finalModoId,
+          categoria: finalCategoria,
+          armaNombre: finalArmaNombre,
+          submodoNombre: finalSubmodoNombre,
+          codigoArmero: finalCodigoArmero,
+          calificacion: finalCalificacion
+        });
+        return res.status(201).json(result);
+      }
+
+      res.status(501).json({ error: 'createLoadout no implementado para este repositorio' });
+    } catch (err: any) {
+      console.error('Error creating loadout:', err);
+      res.status(500).json({ error: err.message });
+    }
+  };
+
+  app.post('/api/loadouts', handleCreateLoadout);
+  app.post('/api/weapons', handleCreateLoadout);
+
   // POST: Asignar codigo a un objeto existente (usa createCodigo ya existente, solo que el endpoint es diferente)
   app.post('/api/codigos', async (req: Request, res: Response) => {
     try {

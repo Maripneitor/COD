@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { FormEvent } from 'react';
 import { 
   Layers, 
   Search, 
@@ -27,6 +26,7 @@ import SkeletonLoader from './SkeletonLoader';
 import QuickCopyButton from './QuickCopyButton';
 import InlineEditable from './InlineEditable';
 import WeaponDetailModal from './WeaponDetailModal';
+import NewLoadoutModal from './NewLoadoutModal';
 
 const API_BASE = typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
   ? `http://${window.location.hostname}:3000/api`
@@ -56,11 +56,8 @@ export default function CodManager() {
   // Modals & Dialogs
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
-  const [isWeaponModalOpen, setIsWeaponModalOpen] = useState(false);
+  const [isNewLoadoutOpen, setIsNewLoadoutOpen] = useState(false);
   const [selectedDetailWeapon, setSelectedDetailWeapon] = useState<any | null>(null);
-  const [modalWeaponName, setModalWeaponName] = useState('');
-  const [modalWeaponClass, setModalWeaponClass] = useState('Fusiles de Asalto');
-  const [modalCodeValue, setModalCodeValue] = useState('');
   const [newCodeInputs, setNewCodeInputs] = useState<Record<number, string>>({});
 
   // Toast Notifications
@@ -131,66 +128,101 @@ export default function CodManager() {
 
   // Weapon & Code CRUD Handlers
   const handleOpenAddWeapon = (defaultCategory?: string) => {
-    setModalWeaponName('');
-    setModalCodeValue('');
     if (defaultCategory && defaultCategory !== 'Todos') {
-      setModalWeaponClass(defaultCategory);
+      setSelectedCategory(defaultCategory);
     }
-    setIsWeaponModalOpen(true);
+    setIsNewLoadoutOpen(true);
   };
 
-  const handleSaveWeaponModal = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!currentSubmodeId || !modalWeaponName.trim()) return;
+  const handleLoadoutCreated = (newLoadout: {
+    modoCodigo: string;
+    categoria: string;
+    armaNombre: string;
+    submodoNombre: string;
+    codigoArmero: string;
+    calificacion: number;
+    codigoId?: number;
+    objetoId?: number;
+  }) => {
+    // Optimistic UI state update
+    setModes(prevModes => {
+      const updated = prevModes.map(m => {
+        // Match mode
+        const isTargetMode = m.codigo.toUpperCase() === newLoadout.modoCodigo.toUpperCase() ||
+          (m.nombre && m.nombre.toLowerCase().includes(newLoadout.modoCodigo.toLowerCase())) ||
+          m.id === currentModeId;
 
-    try {
-      const currentSub = modes
-        .find(m => m.id === currentModeId)
-        ?.submodos?.find(s => s.id === currentSubmodeId);
-      
-      let targetClass = currentSub?.clases?.find(c => c.nombre.toLowerCase() === modalWeaponClass.toLowerCase());
-      let classId = targetClass?.id;
+        if (!isTargetMode) return m;
 
-      if (!classId) {
-        const resCls = await fetch(`${API_BASE}/submodos/${currentSubmodeId}/clases`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre: modalWeaponClass }),
-        });
-        const newCls = await resCls.json();
-        classId = newCls.id;
-      }
+        const submodos = [...(m.submodos || [])];
+        let sm = submodos.find(s => 
+          s.nombre.toLowerCase().includes(newLoadout.submodoNombre.toLowerCase().split('/')[0].trim()) ||
+          newLoadout.submodoNombre.toLowerCase().includes(s.nombre.toLowerCase().split('/')[0].trim())
+        );
 
-      const resObj = await fetch(`${API_BASE}/objetos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clase_id: classId,
-          posicion: 1,
-          nombre: modalWeaponName.trim(),
-        }),
+        if (!sm) {
+          sm = {
+            id: Date.now(),
+            nombre: newLoadout.submodoNombre,
+            es_predeterminado: false,
+            orden: submodos.length + 1,
+            clases: []
+          };
+          submodos.push(sm);
+        }
+
+        const clases = [...(sm.clases || [])];
+        let cl = clases.find(c => c.nombre.toLowerCase() === newLoadout.categoria.toLowerCase());
+        if (!cl) {
+          cl = {
+            id: Date.now() + 1,
+            nombre: newLoadout.categoria,
+            objetos: []
+          };
+          clases.push(cl);
+        }
+
+        const objetos = [...(cl.objetos || [])];
+        let obj = objetos.find(o => o.nombre.toLowerCase() === newLoadout.armaNombre.toLowerCase());
+        if (!obj) {
+          obj = {
+            id: newLoadout.objetoId || Date.now() + 2,
+            nombre: newLoadout.armaNombre,
+            posicion: objetos.length + 1,
+            codigos: []
+          };
+          objetos.push(obj);
+        }
+
+        const newCodeItem = {
+          id: newLoadout.codigoId || Date.now() + 3,
+          codigo: newLoadout.codigoArmero,
+          calificacion: newLoadout.calificacion
+        };
+
+        const updatedObj = {
+          ...obj,
+          codigos: [newCodeItem, ...(obj.codigos || [])].sort(
+            (a, b) => (b.calificacion ?? 0) - (a.calificacion ?? 0)
+          )
+        };
+
+        const updatedClases = clases.map(c => 
+          c.id === cl!.id 
+            ? { ...c, objetos: objetos.map(o => o.id === obj!.id ? updatedObj : o) }
+            : c
+        );
+
+        return {
+          ...m,
+          submodos: submodos.map(s => s.id === sm!.id ? { ...s, clases: updatedClases } : s)
+        };
       });
-      const savedWeapon = await resObj.json();
+      return updated;
+    });
 
-      const codeVal = modalCodeValue.trim().toUpperCase();
-      if (codeVal) {
-        await fetch(`${API_BASE}/codigos`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            objeto_id: savedWeapon.id,
-            codigo: codeVal,
-          }),
-        });
-      }
-
-      setIsWeaponModalOpen(false);
-      await loadData();
-      showToast(`Arma "${modalWeaponName}" guardada`, 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Error al guardar arma', 'error');
-    }
+    showToast('Armero guardado con éxito', 'success');
+    loadData(); // Re-sync in background
   };
 
   const handleUpdateWeaponName = async (weaponId: number, newName: string) => {
@@ -538,11 +570,21 @@ export default function CodManager() {
               )}
             </div>
 
-            {/* Secondary Action Icons */}
-            <div className="flex items-center gap-1 shrink-0">
+            {/* Action Buttons: Primary [+ Nuevo Armero] and Secondary Icons */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setIsNewLoadoutOpen(true)}
+                className="btn-press px-2.5 sm:px-3.5 py-1.5 min-h-[32px] sm:min-h-[34px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-all active:scale-95 touch-manipulation"
+                title="Añadir Nuevo Armero / Clase"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span className="hidden sm:inline">Nuevo Armero</span>
+                <span className="sm:hidden font-bold">Nuevo</span>
+              </button>
+
               <button
                 onClick={() => setIsCommandPaletteOpen(true)}
-                className="btn-press p-1.5 min-h-[32px] min-w-[32px] rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center transition-colors"
+                className="btn-press p-1.5 min-h-[32px] min-w-[32px] rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center transition-colors touch-manipulation"
                 title="Paleta de Comandos (Ctrl+K)"
                 aria-label="Buscar comandos"
               >
@@ -551,7 +593,7 @@ export default function CodManager() {
 
               <button
                 onClick={() => setIsVaultOpen(true)}
-                className="btn-press p-1.5 min-h-[32px] min-w-[32px] rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center transition-colors"
+                className="btn-press p-1.5 min-h-[32px] min-w-[32px] rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center transition-colors touch-manipulation"
                 title="Bóveda de Datos (JSON / CSV)"
                 aria-label="Importar y Exportar"
               >
@@ -968,88 +1010,17 @@ export default function CodManager() {
         onShowToast={showToast}
       />
 
-      {/* Add Weapon Dialog Modal */}
-      {isWeaponModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Crosshair className="w-4 h-4 text-blue-600" />
-                <h3 className="text-xs font-bold text-slate-900">
-                  Registrar Arma en {currentSubmode?.nombre}
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsWeaponModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg touch-manipulation"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveWeaponModal} className="p-4 space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Categoría
-                </label>
-                <select
-                  value={modalWeaponClass}
-                  onChange={(e) => setModalWeaponClass(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 outline-none focus:border-blue-500"
-                >
-                  {CATEGORY_CHIPS.filter(c => c !== 'Todos').map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nombre del Arma
-                </label>
-                <input
-                  required
-                  type="text"
-                  autoFocus
-                  value={modalWeaponName}
-                  onChange={(e) => setModalWeaponName(e.target.value)}
-                  placeholder="ej. XM4, DL Q33, Type 19..."
-                  className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Código de Armero (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={modalCodeValue}
-                  onChange={(e) => setModalCodeValue(e.target.value.toUpperCase())}
-                  placeholder="ej. XM4-1A2G4E8F9E"
-                  className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-mono uppercase text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsWeaponModalOpen(false)}
-                  className="btn-press px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg touch-manipulation"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="btn-press px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs touch-manipulation"
-                >
-                  Guardar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* New Loadout & Gunsmith Registration Modal / Mobile Bottom Sheet */}
+      <NewLoadoutModal
+        isOpen={isNewLoadoutOpen}
+        onClose={() => setIsNewLoadoutOpen(false)}
+        onSuccess={handleLoadoutCreated}
+        modes={modes}
+        activeModoId={currentModeId || (modes[0]?.id ?? 1)}
+        selectedCategory={selectedCategory !== 'Todos' ? selectedCategory : undefined}
+        selectedSubmode={currentSubmode?.nombre}
+        apiBase={API_BASE}
+      />
 
       {/* Floating Tactical Toast HUD */}
       <div
