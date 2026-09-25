@@ -27,6 +27,7 @@ import QuickCopyButton from './QuickCopyButton';
 import InlineEditable from './InlineEditable';
 import WeaponDetailModal from './WeaponDetailModal';
 import NewLoadoutModal from './NewLoadoutModal';
+import { matchesSearch } from '../utils/searchUtils';
 
 const API_BASE = typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
   ? `http://${window.location.hostname}:3000/api`
@@ -509,13 +510,15 @@ export default function CodManager() {
       }
 
       clase.objetos?.forEach(obj => {
-        // Search Filter
-        const q = searchQuery.toLowerCase().trim();
-        const matchesName = !q || obj.nombre.toLowerCase().includes(q);
-        const matchesClass = !q || clase.nombre.toLowerCase().includes(q);
-        const matchesCode = !q || obj.codigos?.some(c => c.codigo.toLowerCase().includes(q));
+        // Smart Fuzzy / Token Search Filter
+        const matches = !searchQuery.trim() || matchesSearch(searchQuery, {
+          weaponName: obj.nombre,
+          className: clase.nombre,
+          submodeName: currentSubmode.nombre,
+          codes: obj.codigos,
+        });
 
-        if (matchesName || matchesClass || matchesCode) {
+        if (matches) {
           const sortedCodes = [...(obj.codigos || [])].sort((a, b) => (b.calificacion || 0) - (a.calificacion || 0));
           
           // Collect all submode occurrences of this weapon to show in detail modal
@@ -587,22 +590,25 @@ export default function CodManager() {
               })}
             </div>
 
-            {/* Quick Live Search Bar */}
+            {/* Quick Live Search Bar with Fast Clear */}
             <div className="relative flex-1 min-w-0">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar arma o código..."
-                className="w-full pl-7 pr-6 py-1 min-h-[32px] text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-100 transition-all"
+                placeholder="Buscar arma, código o categoría..."
+                className="w-full pl-7 pr-7 py-1 min-h-[32px] text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-100 transition-all font-medium"
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-full transition-colors"
+                  title="Limpiar búsqueda"
+                  aria-label="Limpiar búsqueda"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -804,13 +810,7 @@ export default function CodManager() {
                   )
                 )
               )
-              .filter(item => {
-                if (!searchQuery.trim()) return true;
-                const q = searchQuery.toLowerCase();
-                return item.weaponName.toLowerCase().includes(q) ||
-                       item.className.toLowerCase().includes(q) ||
-                       item.codes.some(c => c.codigo.toLowerCase().includes(q));
-              })
+              .filter(item => !searchQuery.trim() || matchesSearch(searchQuery, item))
               .map(item => (
                 <div key={`${item.submodeName}-${item.weaponId}`} className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2">
                   <div className="flex items-center justify-between">
@@ -856,29 +856,60 @@ export default function CodManager() {
             </div>
 
             {displayedWeapons.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl bg-white border border-slate-200 text-slate-400 space-y-2">
-                <Crosshair className="w-8 h-8 mx-auto text-slate-300" />
-                <h4 className="text-xs font-bold text-slate-700">
-                  No se encontraron armas coincidentes
-                </h4>
-                <p className="text-[11px] text-slate-500">
-                  Cambia de categoría o añade una nueva arma a este submodo.
-                </p>
-                <button
-                  onClick={() => handleOpenAddWeapon(selectedCategory)}
-                  className="btn-press px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold"
-                >
-                  + Añadir Arma
-                </button>
+              <div className="p-8 sm:p-12 text-center rounded-2xl bg-white border border-slate-200 text-slate-400 space-y-3 shadow-xs">
+                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                  {searchQuery.trim() ? (
+                    <Search className="w-5 h-5 text-slate-400" />
+                  ) : (
+                    <Crosshair className="w-5 h-5 text-slate-400" />
+                  )}
+                </div>
+                <div className="space-y-1 max-w-md mx-auto">
+                  <h4 className="text-sm font-bold text-slate-800">
+                    {searchQuery.trim() 
+                      ? `No se encontraron armas ni códigos para "${searchQuery.trim()}"`
+                      : 'No se encontraron armas coincidentes'
+                    }
+                  </h4>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    {searchQuery.trim()
+                      ? 'Intenta buscando por nombre, código o categoría.'
+                      : 'Cambia de categoría o añade una nueva arma a este submodo.'
+                    }
+                  </p>
+                </div>
+                {searchQuery.trim() ? (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="btn-press inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Limpiar Búsqueda</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleOpenAddWeapon(selectedCategory)}
+                    className="btn-press inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Añadir Arma</span>
+                  </button>
+                )}
               </div>
             ) : (
               /* Ultra-Optimized Grid (1 col mobile, 2 tablet, 3-4 desktop) */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 w-full">
-                {displayedWeapons.map((weapon) => (
-                  <div
-                    key={weapon.weaponId}
-                    className="bg-white rounded-xl border border-slate-200 p-3 sm:p-3.5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all space-y-3 flex flex-col justify-between w-full"
-                  >
+                {displayedWeapons.map((weapon) => {
+                  const isSearching = !!searchQuery.trim();
+                  return (
+                    <div
+                      key={weapon.weaponId}
+                      className={`bg-white rounded-xl border p-3 sm:p-3.5 shadow-sm hover:shadow-md transition-all space-y-3 flex flex-col justify-between w-full ${
+                        isSearching
+                          ? 'border-blue-300 ring-1 ring-blue-500/25 bg-blue-50/10'
+                          : 'border-slate-200 hover:border-blue-300'
+                      }`}
+                    >
                     {/* Weapon Card Header */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-1.5">
@@ -1027,7 +1058,8 @@ export default function CodManager() {
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+              })}
               </div>
             )}
           </div>

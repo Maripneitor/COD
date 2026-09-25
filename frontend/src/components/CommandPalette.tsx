@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X, Layers, Crosshair, Hash, Database, ArrowRight } from 'lucide-react';
 import type { IModo, SearchResultItem } from '../types';
+import { matchesSearch } from '../utils/searchUtils';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -32,10 +33,10 @@ export default function CommandPalette({
 
   // Build searchable index from modes
   const results: SearchResultItem[] = [];
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
 
   modes.forEach((mode) => {
-    if (!q || mode.nombre.toLowerCase().includes(q) || mode.codigo.toLowerCase().includes(q)) {
+    if (!q || matchesSearch(q, { nombre: mode.nombre, codigo: mode.codigo })) {
       results.push({
         type: 'mode',
         title: mode.nombre,
@@ -46,7 +47,7 @@ export default function CommandPalette({
     }
 
     mode.submodos?.forEach((submode) => {
-      if (!q || submode.nombre.toLowerCase().includes(q)) {
+      if (!q || matchesSearch(q, { submodeName: submode.nombre })) {
         results.push({
           type: 'submode',
           title: submode.nombre,
@@ -58,7 +59,7 @@ export default function CommandPalette({
       }
 
       submode.clases?.forEach((clase) => {
-        if (!q || clase.nombre.toLowerCase().includes(q)) {
+        if (!q || matchesSearch(q, { className: clase.nombre })) {
           results.push({
             type: 'class',
             title: clase.nombre,
@@ -71,10 +72,14 @@ export default function CommandPalette({
         }
 
         clase.objetos?.forEach((obj) => {
-          const matchWeapon = !q || obj.nombre.toLowerCase().includes(q);
-          const matchCode = obj.codigos?.some(c => c.codigo.toLowerCase().includes(q));
+          const matchWeapon = !q || matchesSearch(q, {
+            weaponName: obj.nombre,
+            className: clase.nombre,
+            submodeName: submode.nombre,
+            codes: obj.codigos,
+          });
 
-          if (matchWeapon || matchCode) {
+          if (matchWeapon) {
             results.push({
               type: 'weapon',
               title: obj.nombre,
@@ -87,7 +92,7 @@ export default function CommandPalette({
             });
 
             obj.codigos?.forEach((cd) => {
-              if (!q || cd.codigo.toLowerCase().includes(q)) {
+              if (!q || matchesSearch(q, { codes: [cd.codigo], weaponName: obj.nombre, className: clase.nombre })) {
                 results.push({
                   type: 'code',
                   title: cd.codigo,
