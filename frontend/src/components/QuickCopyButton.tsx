@@ -38,12 +38,12 @@ export default function QuickCopyButton({
       <button
         type="button"
         disabled
-        className={`copied-spring inline-flex items-center justify-center gap-1.5 font-tactical uppercase tracking-wider font-bold rounded-lg border bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.35)] shrink-0 touch-manipulation ${
-          size === 'sm' ? 'px-3 py-1.5 min-h-[36px] sm:min-h-[28px] text-[11px]' : 'px-4 py-2 min-h-[42px] sm:min-h-[34px] text-xs'
+        className={`copied-spring inline-flex items-center justify-center gap-1.5 font-medium rounded-lg border bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm shrink-0 touch-manipulation ${
+          size === 'sm' ? 'px-2.5 py-1 min-h-[32px] sm:min-h-[26px] text-xs' : 'px-3.5 py-1.5 min-h-[38px] sm:min-h-[32px] text-xs'
         } ${className}`}
       >
-        <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />
-        <span>¡COPIADO!</span>
+        <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+        <span>Copiado</span>
       </button>
     );
   }
@@ -52,14 +52,14 @@ export default function QuickCopyButton({
     <button
       type="button"
       onClick={handleCopy}
-      className={`btn-press inline-flex items-center justify-center gap-1.5 font-tactical uppercase tracking-wider font-bold rounded-lg border bg-cyan-950/60 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/20 hover:text-white hover:border-cyan-400 active:bg-cyan-500/30 shadow-sm shrink-0 touch-manipulation ${
-        size === 'sm' ? 'px-2.5 py-1.5 min-h-[36px] sm:min-h-[28px] text-[11px] sm:text-[10px]' : 'px-3.5 py-2 min-h-[42px] sm:min-h-[34px] text-xs'
+      className={`btn-press inline-flex items-center justify-center gap-1.5 font-medium rounded-lg border bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 hover:text-slate-900 active:bg-slate-300 shadow-sm shrink-0 touch-manipulation ${
+        size === 'sm' ? 'px-2.5 py-1 min-h-[32px] sm:min-h-[26px] text-xs' : 'px-3.5 py-1.5 min-h-[38px] sm:min-h-[32px] text-xs'
       } ${className}`}
       title="Copiar código al portapapeles"
       aria-label={`Copiar código ${textToCopy}`}
     >
-      <Copy className="w-3.5 h-3.5 text-cyan-400" />
-      <span>COPIAR</span>
+      <Copy className="w-3.5 h-3.5 text-slate-500" />
+      <span>Copiar</span>
     </button>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Layers, Crosshair, Hash, Terminal, Database, ArrowRight } from 'lucide-react';
+import { Search, X, Layers, Crosshair, Hash, Database, ArrowRight } from 'lucide-react';
 import type { IModo, SearchResultItem } from '../types';
 
 interface CommandPaletteProps {
@@ -135,49 +135,49 @@ export default function CommandPalette({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 sm:pt-24 px-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 sm:pt-24 px-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className="w-full max-w-2xl rounded-2xl glass-panel-glow border border-cyan-500/40 shadow-[0_0_50px_rgba(6,182,212,0.25)] overflow-hidden animate-in zoom-in-95 duration-150"
+        className="w-full max-w-2xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
         onKeyDown={handleKeyDown}
       >
         {/* Search Header */}
-        <div className="flex items-center px-4 py-3.5 border-b border-cyan-500/20 bg-slate-900/80">
-          <Terminal className="w-5 h-5 text-cyan-400 mr-3 animate-pulse" />
+        <div className="flex items-center px-4 py-3.5 border-b border-slate-200 bg-slate-50/70">
+          <Search className="w-5 h-5 text-blue-600 mr-3 shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar modos, clases, armas o códigos (ej: M4, DL Q33)..."
-            className="flex-1 bg-transparent text-slate-100 placeholder-slate-500 text-sm font-tactical tracking-wide outline-none"
+            placeholder="Buscar modos, clases, armas o códigos (ej: XM4, DL Q33)..."
+            className="flex-1 bg-transparent text-slate-900 placeholder:text-slate-400 text-sm font-medium outline-none"
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="p-1 rounded-md text-slate-400 hover:text-slate-200"
+              className="p-1 rounded-md text-slate-400 hover:text-slate-700 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           )}
-          <span className="hidden sm:inline-block ml-3 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-400 border border-slate-700">
-            ESC para cerrar
+          <span className="hidden sm:inline-block ml-3 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-200 text-slate-600 border border-slate-300/60">
+            ESC
           </span>
         </div>
 
-        {/* Quick Quick Actions Bar */}
-        <div className="px-4 py-2 border-b border-cyan-500/10 bg-slate-950/40 flex items-center justify-between text-xs text-slate-400">
-          <span className="flex items-center gap-1.5 font-tactical">
-            <Search className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{displayResults.length} resultados encontrados</span>
+        {/* Quick Actions Bar */}
+        <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/40 flex items-center justify-between text-xs text-slate-500">
+          <span className="flex items-center gap-1.5 font-medium">
+            <Search className="w-3.5 h-3.5 text-blue-600" />
+            <span>{displayResults.length} resultados</span>
           </span>
           <button
             onClick={() => {
               onClose();
               onOpenVault();
             }}
-            className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-tactical uppercase tracking-wider text-[11px] font-bold"
+            className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-semibold text-[11px] transition-colors"
           >
-            <Database className="w-3 h-3" />
+            <Database className="w-3.5 h-3.5" />
             <span>Abrir Bóveda de Datos (JSON/CSV)</span>
           </button>
         </div>
@@ -185,9 +185,9 @@ export default function CommandPalette({
         {/* Results List */}
         <div ref={listRef} className="max-h-[60vh] overflow-y-auto p-2 space-y-1">
           {displayResults.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
-              <Crosshair className="w-8 h-8 mx-auto mb-2 text-slate-600 opacity-60" />
-              <p className="text-sm font-tactical">No se encontraron objetivos coincidentes con "{query}"</p>
+            <div className="p-8 text-center text-slate-400">
+              <Crosshair className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm font-medium text-slate-500">No se encontraron resultados para "{query}"</p>
             </div>
           ) : (
             displayResults.map((item, index) => {
@@ -202,20 +202,20 @@ export default function CommandPalette({
                   onMouseEnter={() => setSelectedIndex(index)}
                   className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer transition-all duration-100 ${
                     isSelected
-                      ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.15)]'
-                      : 'text-slate-300 hover:bg-slate-900/60 border border-transparent'
+                      ? 'bg-blue-50/80 text-blue-950 border border-blue-200'
+                      : 'text-slate-800 hover:bg-slate-50 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                         item.type === 'weapon'
-                          ? 'bg-fuchsia-500/20 text-fuchsia-400'
+                          ? 'bg-blue-100 text-blue-700'
                           : item.type === 'code'
-                          ? 'bg-emerald-500/20 text-emerald-400 font-mono text-xs'
+                          ? 'bg-emerald-100 text-emerald-700 font-mono text-xs'
                           : item.type === 'class'
-                          ? 'bg-cyan-500/20 text-cyan-400'
-                          : 'bg-blue-500/20 text-blue-400'
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : 'bg-slate-100 text-slate-700'
                       }`}
                     >
                       {item.type === 'weapon' && <Crosshair className="w-4 h-4" />}
@@ -226,24 +226,24 @@ export default function CommandPalette({
 
                     <div className="min-w-0">
                       <div className="text-sm font-semibold truncate flex items-center gap-2">
-                        <span>{item.title}</span>
+                        <span className="text-slate-900">{item.title}</span>
                         {item.type === 'code' && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
                             CÓDIGO
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-400 truncate">{item.subtitle}</div>
+                      <div className="text-xs text-slate-500 truncate">{item.subtitle}</div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 ml-3">
                     {item.badge && (
-                      <span className="text-[10px] font-tactical uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-slate-900/80 text-slate-300 border border-slate-700">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                         {item.badge}
                       </span>
                     )}
-                    <ArrowRight className={`w-4 h-4 ${isSelected ? 'text-cyan-400 translate-x-0.5' : 'text-slate-600'} transition-transform`} />
+                    <ArrowRight className={`w-4 h-4 ${isSelected ? 'text-blue-600 translate-x-0.5' : 'text-slate-300'} transition-transform`} />
                   </div>
                 </div>
               );
@@ -252,13 +252,13 @@ export default function CommandPalette({
         </div>
 
         {/* Footer shortcuts */}
-        <div className="px-4 py-2 border-t border-cyan-500/10 bg-slate-950/70 flex items-center justify-between text-[11px] font-mono text-slate-500">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-2.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-[11px] font-medium text-slate-500">
+          <div className="flex items-center gap-3 font-mono">
             <span>↑↓ Navegar</span>
             <span>↵ Seleccionar</span>
             <span>Esc Salir</span>
           </div>
-          <span className="text-cyan-500 font-tactical">NexusCOD Terminal v2.0</span>
+          <span className="text-blue-600 font-semibold font-sans">NexusCOD Enterprise</span>
         </div>
       </div>
     </div>
