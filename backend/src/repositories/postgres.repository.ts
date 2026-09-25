@@ -287,6 +287,21 @@ export class PostgresCodRepository implements ICodRepository {
     return res.rows[0];
   }
 
+  async deleteClass(id: number): Promise<boolean> {
+    const res = await pgPool.query('DELETE FROM clases WHERE id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  async deleteSubmode(id: number): Promise<boolean> {
+    const res = await pgPool.query('DELETE FROM submodos WHERE id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  async deleteMode(id: number): Promise<boolean> {
+    const res = await pgPool.query('DELETE FROM modos WHERE id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
+  }
+
   async deleteObject(id: number): Promise<boolean> {
     const res = await pgPool.query('DELETE FROM objetos WHERE id = $1', [id]);
     return (res.rowCount ?? 0) > 0;
@@ -295,6 +310,73 @@ export class PostgresCodRepository implements ICodRepository {
   async deleteCodigo(id: number): Promise<boolean> {
     const res = await pgPool.query('DELETE FROM codigos WHERE id = $1', [id]);
     return (res.rowCount ?? 0) > 0;
+  }
+
+  async importData(data: IModo[]): Promise<boolean> {
+    const client = await pgPool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const modo of data) {
+        let modoId = modo.id;
+        // Check if mode exists by codigo or create
+        const mRes = await client.query(
+          'INSERT INTO modos (codigo, nombre, descripcion) VALUES ($1, $2, $3) ON CONFLICT (codigo) DO UPDATE SET nombre = EXCLUDED.nombre RETURNING id',
+          [modo.codigo || modo.nombre.substring(0, 5).toUpperCase(), modo.nombre, modo.descripcion || '']
+        );
+        modoId = mRes.rows[0]?.id;
+
+        if (modo.submodos && Array.isArray(modo.submodos)) {
+          for (const sm of modo.submodos) {
+            const smRes = await client.query(
+              'INSERT INTO submodos (modo_id, nombre, es_predeterminado, orden) VALUES ($1, $2, $3, $4) RETURNING id',
+              [modoId, sm.nombre, sm.es_predeterminado || false, sm.orden || 0]
+            );
+            const smId = smRes.rows[0]?.id;
+
+            if (sm.clases && Array.isArray(sm.clases)) {
+              for (const cl of sm.clases) {
+                const clRes = await client.query(
+                  'INSERT INTO clases (submodo_id, nombre) VALUES ($1, $2) RETURNING id',
+                  [smId, cl.nombre]
+                );
+                const clId = clRes.rows[0]?.id;
+
+                if (cl.objetos && Array.isArray(cl.objetos)) {
+                  for (const obj of cl.objetos) {
+                    const objRes = await client.query(
+                      'INSERT INTO objetos (clase_id, nombre, posicion) VALUES ($1, $2, $3) RETURNING id',
+                      [clId, obj.nombre, obj.posicion || 1]
+                    );
+                    const objId = objRes.rows[0]?.id;
+
+                    if (obj.codigos && Array.isArray(obj.codigos)) {
+                      for (const cd of obj.codigos) {
+                        const codeStr = typeof cd === 'string' ? cd : cd.codigo;
+                        const rating = typeof cd === 'object' && cd.calificacion ? cd.calificacion : 0;
+                        if (codeStr) {
+                          await client.query(
+                            'INSERT INTO codigos (objeto_id, codigo, calificacion) VALUES ($1, $2, $3)',
+                            [objId, codeStr, rating]
+                          );
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      await client.query('COMMIT');
+      return true;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      console.error('Error importing data:', e);
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 }
 

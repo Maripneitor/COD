@@ -256,6 +256,71 @@ getRepository().then(repositoryInstance => {
     }
   });
 
+  // DELETE: Eliminar modo
+  app.delete('/api/modes/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const success = repo.deleteMode ? await repo.deleteMode(Number(id)) : false;
+      res.json({ success });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE: Eliminar submodo
+  app.delete('/api/submodos/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const success = repo.deleteSubmode ? await repo.deleteSubmode(Number(id)) : false;
+      res.json({ success });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE: Eliminar clase
+  app.delete('/api/clases/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const success = repo.deleteClass ? await repo.deleteClass(Number(id)) : false;
+      res.json({ success });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST: Importar datos JSON
+  app.post('/api/import', async (req: Request, res: Response) => {
+    try {
+      const data = req.body;
+      if (!Array.isArray(data)) {
+        return res.status(400).json({ error: 'Data must be an array of modes' });
+      }
+      if (repo.importData) {
+        await repo.importData(data);
+        res.json({ success: true, message: 'Datos importados exitosamente' });
+      } else {
+        res.status(501).json({ error: 'Import no implementado para este repositorio' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET: Exportar datos JSON completos
+  app.get('/api/export', async (_req: Request, res: Response) => {
+    try {
+      const data = await repo.getAllModes();
+      res.json({
+        exportDate: new Date().toISOString(),
+        version: '2.0-nexus',
+        data
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`Servidor COD-Classes corriendo en http://localhost:${PORT}`);

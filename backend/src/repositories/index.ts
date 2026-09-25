@@ -10,7 +10,7 @@ export const getRepository = async (): Promise<ICodRepository> => {
   if (driver === 'mongodb') {
     await connectMongo();
     console.log('[Factory] Usando Repositorio: MongoDB Atlas');
-    return new MongoCodRepository();
+    return new MongoCodRepository() as any;
   }
 
   // Verificación básica del pool de Postgres

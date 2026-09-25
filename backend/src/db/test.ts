@@ -12,13 +12,15 @@ async function runTests() {
   let modes = await repo.getAllModes();
   console.log(JSON.stringify(modes, null, 2));
   
-  if (modes.length > 0) {
+  if (modes.length > 0 && modes[0]) {
     const firstMode = modes[0];
     console.log(`Testing changing mode name from ${firstMode.nombre} to 'Multijugador (Editado)'`);
     await repo.updateModeName(firstMode.id, 'Multijugador (Editado)');
     
     modes = await repo.getAllModes();
-    console.log(`New name: ${modes[0].nombre}`);
+    if (modes[0]) {
+      console.log(`New name: ${modes[0].nombre}`);
+    }
   }
 
   const client = new Client({ connectionString: process.env.DATABASE_URL });

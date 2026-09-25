@@ -1,6 +1,7 @@
 export interface ICodigo {
   id: number;
   codigo: string;
+  calificacion?: number;
 }
 
 export interface IObjeto {
@@ -54,6 +55,10 @@ export interface ICodRepository {
   getSlotsByClaseId(claseId: number): Promise<Record<number, any>>;
   getAllSlotsByModoId(modoId: number): Promise<any>;
   upsertObject(claseId: number, posicion: number, nombre: string): Promise<IObjeto>;
+  deleteMode?(id: number): Promise<boolean>;
+  deleteSubmode?(id: number): Promise<boolean>;
+  deleteClass?(id: number): Promise<boolean>;
   deleteObject(id: number): Promise<boolean>;
   deleteCodigo(id: number): Promise<boolean>;
+  importData?(data: IModo[]): Promise<boolean>;
 }
