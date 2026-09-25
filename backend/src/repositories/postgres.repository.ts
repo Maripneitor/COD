@@ -378,6 +378,10 @@ export class PostgresCodRepository implements ICodRepository {
       console.error('Error importing data:', e);
       throw e;
     } finally {
+      client.release();
+    }
+  }
+
   async createLoadout(params: {
     modoCodigo?: string;
     modoId?: number;

@@ -88,14 +88,22 @@ export default function CodManager() {
       setModes(data);
 
       if (data.length > 0) {
-        // Set Multijugador (MJ) by default if available
+        // Set Multijugador (MJ) by default if available or preserve valid selection
         const mjMode = data.find(m => m.codigo === 'MJ') || data[0];
-        setCurrentModeId(prev => prev ?? mjMode.id);
+        setCurrentModeId(prev => {
+          if (prev && data.some(m => m.id === prev)) return prev;
+          return mjMode.id;
+        });
 
-        if (mjMode.submodos && mjMode.submodos.length > 0) {
-          const defaultSub = mjMode.submodos.find(s => s.es_predeterminado) || mjMode.submodos[0];
-          setCurrentSubmodeId(prev => prev ?? defaultSub.id);
-        }
+        setCurrentSubmodeId(prev => {
+          const targetMode = data.find(m => m.id === currentModeId) || mjMode;
+          if (targetMode && targetMode.submodos && targetMode.submodos.length > 0) {
+            if (prev && targetMode.submodos.some(s => s.id === prev)) return prev;
+            const defaultSub = targetMode.submodos.find(s => s.es_predeterminado) || targetMode.submodos[0];
+            return defaultSub.id;
+          }
+          return null;
+        });
       }
       setLoading(false);
     } catch (err) {
@@ -436,9 +444,13 @@ export default function CodManager() {
     return <Layers className="w-3.5 h-3.5 text-blue-600 shrink-0" />;
   };
 
-  // Active Data Model
-  const currentMode = modes.find(m => m.id === currentModeId);
-  const currentSubmode = currentMode?.submodos?.find(s => s.id === currentSubmodeId);
+  // Active Data Model with resilient fallbacks
+  const currentMode = modes.find(m => m.id === currentModeId) 
+    || modes.find(m => m.codigo === 'MJ') 
+    || modes[0];
+  const currentSubmode = currentMode?.submodos?.find(s => s.id === currentSubmodeId) 
+    || currentMode?.submodos?.find(s => s.es_predeterminado) 
+    || currentMode?.submodos?.[0];
 
   // Helper to calculate max rating of a weapon
   const getWeaponMaxRating = (codes: Array<{ calificacion?: number }>) => {
