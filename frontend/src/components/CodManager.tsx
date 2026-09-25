@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { 
-  Database, 
   Layers, 
   Search, 
   CheckCircle, 
@@ -9,8 +8,6 @@ import {
   Info,
   Plus, 
   X, 
-  FolderTree, 
-  LayoutGrid, 
   Globe, 
   Crosshair, 
   Star, 
@@ -32,7 +29,7 @@ import InlineEditable from './InlineEditable';
 const API_BASE = 'http://localhost:3000/api';
 
 const CATEGORY_CHIPS = [
-  'Todas',
+  'Todos',
   'Fusiles de Asalto',
   'Subfusiles',
   'Fusiles de Precisión',
@@ -49,7 +46,7 @@ export default function CodManager() {
   // Fast Selection State
   const [currentModeId, setCurrentModeId] = useState<number | null>(null);
   const [currentSubmodeId, setCurrentSubmodeId] = useState<number | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals & Dialogs
@@ -66,7 +63,7 @@ export default function CodManager() {
 
   const showToast = (message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 2500);
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 1500);
   };
 
   // Keyboard shortcut Ctrl+K listener
@@ -101,7 +98,7 @@ export default function CodManager() {
       setLoading(false);
     } catch (err) {
       console.error(err);
-      showToast('Error conectando con la base de datos NexusCOD', 'error');
+      showToast('Error conectando con la base de datos', 'error');
       setLoading(false);
     }
   }, []);
@@ -131,7 +128,7 @@ export default function CodManager() {
   const handleOpenAddWeapon = (defaultCategory?: string) => {
     setModalWeaponName('');
     setModalCodeValue('');
-    if (defaultCategory && defaultCategory !== 'Todas') {
+    if (defaultCategory && defaultCategory !== 'Todos') {
       setModalWeaponClass(defaultCategory);
     }
     setIsWeaponModalOpen(true);
@@ -142,7 +139,6 @@ export default function CodManager() {
     if (!currentSubmodeId || !modalWeaponName.trim()) return;
 
     try {
-      // Find or create class
       const currentSub = modes
         .find(m => m.id === currentModeId)
         ?.submodos?.find(s => s.id === currentSubmodeId);
@@ -185,7 +181,7 @@ export default function CodManager() {
 
       setIsWeaponModalOpen(false);
       await loadData();
-      showToast(`Arma "${modalWeaponName}" guardada con éxito`, 'success');
+      showToast(`Arma "${modalWeaponName}" guardada`, 'success');
     } catch (err) {
       console.error(err);
       showToast('Error al guardar arma', 'error');
@@ -199,37 +195,77 @@ export default function CodManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nombre: newName }),
       });
-      await loadData();
-      showToast('Nombre de arma actualizado', 'success');
+      // Update local state optimistically
+      setModes(prev => prev.map(m => ({
+        ...m,
+        submodos: m.submodos?.map(sm => ({
+          ...sm,
+          clases: sm.clases?.map(cl => ({
+            ...cl,
+            objetos: cl.objetos?.map(obj => obj.id === weaponId ? { ...obj, nombre: newName } : obj)
+          }))
+        }))
+      })));
+      showToast('Nombre actualizado', 'success');
     } catch (err) {
-      showToast('Error al actualizar nombre', 'error');
+      showToast('Error al actualizar', 'error');
     }
   };
 
   const handleDeleteWeapon = async (weaponId: number) => {
-    if (!confirm('¿Deseas eliminar esta arma y todos sus códigos asociados?')) return;
+    if (!confirm('¿Eliminar esta arma y sus códigos?')) return;
     try {
       await fetch(`${API_BASE}/objetos/${weaponId}`, { method: 'DELETE' });
-      await loadData();
+      // Optimistic delete
+      setModes(prev => prev.map(m => ({
+        ...m,
+        submodos: m.submodos?.map(sm => ({
+          ...sm,
+          clases: sm.clases?.map(cl => ({
+            ...cl,
+            objetos: cl.objetos?.filter(obj => obj.id !== weaponId)
+          }))
+        }))
+      })));
       showToast('Arma eliminada', 'info');
     } catch (err) {
-      showToast('Error al eliminar arma', 'error');
+      showToast('Error al eliminar', 'error');
     }
   };
 
   const handleAddCodeToWeapon = async (weaponId: number, codeVal: string) => {
     if (!codeVal.trim()) return;
     try {
-      await fetch(`${API_BASE}/codigos`, {
+      const res = await fetch(`${API_BASE}/codigos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ objeto_id: weaponId, codigo: codeVal.trim().toUpperCase() }),
       });
+      const newCode = await res.json();
       setNewCodeInputs(prev => ({ ...prev, [weaponId]: '' }));
-      await loadData();
-      showToast('Código de armero guardado', 'success');
+      
+      // Optimistic update
+      setModes(prev => prev.map(m => ({
+        ...m,
+        submodos: m.submodos?.map(sm => ({
+          ...sm,
+          clases: sm.clases?.map(cl => ({
+            ...cl,
+            objetos: cl.objetos?.map(obj => {
+              if (obj.id === weaponId) {
+                return {
+                  ...obj,
+                  codigos: [...(obj.codigos || []), { id: newCode.id || Date.now(), codigo: codeVal.trim().toUpperCase(), calificacion: 5 }]
+                };
+              }
+              return obj;
+            })
+          }))
+        }))
+      })));
+      showToast('Código guardado', 'success');
     } catch (err) {
-      showToast('Error al añadir código', 'error');
+      showToast('Error al guardar código', 'error');
     }
   };
 
@@ -240,34 +276,73 @@ export default function CodManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ codigo: codeVal }),
       });
-      await loadData();
+      setModes(prev => prev.map(m => ({
+        ...m,
+        submodos: m.submodos?.map(sm => ({
+          ...sm,
+          clases: sm.clases?.map(cl => ({
+            ...cl,
+            objetos: cl.objetos?.map(obj => ({
+              ...obj,
+              codigos: obj.codigos?.map(cd => cd.id === codeId ? { ...cd, codigo: codeVal } : cd)
+            }))
+          }))
+        }))
+      })));
       showToast('Código actualizado', 'success');
     } catch (err) {
-      showToast('Error al actualizar código', 'error');
+      showToast('Error al actualizar', 'error');
     }
   };
 
   const handleDeleteCode = async (codeId: number) => {
     try {
       await fetch(`${API_BASE}/codigos/${codeId}`, { method: 'DELETE' });
-      await loadData();
+      setModes(prev => prev.map(m => ({
+        ...m,
+        submodos: m.submodos?.map(sm => ({
+          ...sm,
+          clases: sm.clases?.map(cl => ({
+            ...cl,
+            objetos: cl.objetos?.map(obj => ({
+              ...obj,
+              codigos: obj.codigos?.filter(cd => cd.id !== codeId)
+            }))
+          }))
+        }))
+      })));
       showToast('Código eliminado', 'info');
     } catch (err) {
-      showToast('Error al eliminar código', 'error');
+      showToast('Error al eliminar', 'error');
     }
   };
 
+  // Star Rating Interactive Update + Smooth Instant Re-sorting
   const handleUpdateRating = async (codeId: number, rating: number) => {
     try {
+      // Optimistic update in state so weapons immediately re-order smoothly
+      setModes(prev => prev.map(m => ({
+        ...m,
+        submodos: m.submodos?.map(sm => ({
+          ...sm,
+          clases: sm.clases?.map(cl => ({
+            ...cl,
+            objetos: cl.objetos?.map(obj => ({
+              ...obj,
+              codigos: obj.codigos?.map(cd => cd.id === codeId ? { ...cd, calificacion: rating } : cd)
+            }))
+          }))
+        }))
+      })));
+
       await fetch(`${API_BASE}/codigos/${codeId}/rating`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ calificacion: rating }),
       });
-      await loadData();
-      showToast(`Calificación guardada (${rating}★)`, 'success');
+      showToast(`Calificación guardada: ${rating}★`, 'success');
     } catch (err) {
-      showToast('Error al actualizar calificación', 'error');
+      showToast('Error al calificar', 'error');
     }
   };
 
@@ -283,20 +358,26 @@ export default function CodManager() {
   // Category Icon helper
   const getCategoryIcon = (categoryName: string) => {
     const name = categoryName.toLowerCase();
-    if (name.includes('asalto')) return <Target className="w-4 h-4 text-blue-600" />;
-    if (name.includes('subfusil')) return <Zap className="w-4 h-4 text-amber-600" />;
-    if (name.includes('precisión') || name.includes('precision')) return <Crosshair className="w-4 h-4 text-emerald-600" />;
-    if (name.includes('tirador')) return <Crosshair className="w-4 h-4 text-indigo-600" />;
-    if (name.includes('ligera') || name.includes('ametralladora')) return <Shield className="w-4 h-4 text-rose-600" />;
-    if (name.includes('escopeta')) return <Flame className="w-4 h-4 text-orange-600" />;
-    return <Layers className="w-4 h-4 text-blue-600" />;
+    if (name.includes('asalto')) return <Target className="w-3.5 h-3.5 text-blue-600 shrink-0" />;
+    if (name.includes('subfusil')) return <Zap className="w-3.5 h-3.5 text-amber-600 shrink-0" />;
+    if (name.includes('precisión') || name.includes('precision')) return <Crosshair className="w-3.5 h-3.5 text-emerald-600 shrink-0" />;
+    if (name.includes('tirador')) return <Crosshair className="w-3.5 h-3.5 text-indigo-600 shrink-0" />;
+    if (name.includes('ligera') || name.includes('ametralladora')) return <Shield className="w-3.5 h-3.5 text-rose-600 shrink-0" />;
+    if (name.includes('escopeta')) return <Flame className="w-3.5 h-3.5 text-orange-600 shrink-0" />;
+    return <Layers className="w-3.5 h-3.5 text-blue-600 shrink-0" />;
   };
 
   // Active Data Model
   const currentMode = modes.find(m => m.id === currentModeId);
   const currentSubmode = currentMode?.submodos?.find(s => s.id === currentSubmodeId);
 
-  // Flattened and filtered list of weapons for immediate 1-click access
+  // Helper to calculate max rating of a weapon
+  const getWeaponMaxRating = (codes: Array<{ calificacion?: number }>) => {
+    if (!codes || codes.length === 0) return 0;
+    return Math.max(...codes.map(c => c.calificacion ?? 0));
+  };
+
+  // Flattened, filtered and DYNAMICALLY SORTED list of weapons (Desc by Rating, then Asc by Name)
   const displayedWeapons = useMemo(() => {
     if (!currentSubmode?.clases) return [];
 
@@ -305,12 +386,13 @@ export default function CodManager() {
       weaponName: string;
       className: string;
       submodeName: string;
+      maxRating: number;
       codes: Array<{ id: number; codigo: string; calificacion?: number }>;
     }> = [];
 
     currentSubmode.clases.forEach(clase => {
       // Category Filter
-      if (selectedCategory !== 'Todas' && clase.nombre.toLowerCase() !== selectedCategory.toLowerCase()) {
+      if (selectedCategory !== 'Todos' && clase.nombre.toLowerCase() !== selectedCategory.toLowerCase()) {
         return;
       }
 
@@ -322,142 +404,151 @@ export default function CodManager() {
         const matchesCode = !q || obj.codigos?.some(c => c.codigo.toLowerCase().includes(q));
 
         if (matchesName || matchesClass || matchesCode) {
+          const sortedCodes = [...(obj.codigos || [])].sort((a, b) => (b.calificacion || 0) - (a.calificacion || 0));
           list.push({
             weaponId: obj.id,
             weaponName: obj.nombre,
             className: clase.nombre,
             submodeName: currentSubmode.nombre,
-            codes: obj.codigos || [],
+            maxRating: getWeaponMaxRating(sortedCodes),
+            codes: sortedCodes,
           });
         }
       });
     });
 
-    return list;
+    // Dynamic sorting: Descending by rating (5.0★ -> 4.0★...), then Alphabetically by name
+    return list.sort((a, b) => {
+      if (b.maxRating !== a.maxRating) {
+        return b.maxRating - a.maxRating;
+      }
+      return a.weaponName.localeCompare(b.weaponName, 'es', { sensitivity: 'base' });
+    });
   }, [currentSubmode, selectedCategory, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col pb-16 md:pb-10 font-sans">
+    <div className="min-h-screen w-full max-w-full overflow-hidden bg-slate-50 text-slate-900 flex flex-col pb-12 font-sans select-none">
       
-      {/* 1. Header (Sticky Top Bar, Clean SaaS Office Aesthetic) */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 md:px-8 py-2.5 shadow-xs">
-        <div className="max-w-[96rem] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+      {/* 1. Header (Condensed 2-Line Sticky Top Bar for Floating / Mobile Pop-up Window) */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-2 sm:px-4 py-2 shadow-xs w-full max-w-full overflow-hidden">
+        <div className="max-w-[96rem] mx-auto flex flex-col gap-1.5 w-full">
           
-          {/* Brand Row */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
-                <Database className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h1 className="text-base font-bold text-slate-900 tracking-tight">NexusCOD</h1>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                    SaaS Loadouts
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Actions */}
-            <div className="flex items-center gap-1 sm:hidden">
-              <button
-                onClick={() => setIsCommandPaletteOpen(true)}
-                className="btn-press p-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200"
-                aria-label="Buscar"
-              >
-                <Search className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setIsVaultOpen(true)}
-                className="btn-press p-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200"
-                aria-label="Bóveda"
-              >
-                <Download className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Search & Views Switcher */}
-          <div className="flex items-center gap-2.5 justify-between sm:justify-end">
+          {/* Línea 1: Selector de Modo (MJ / BR / ZM) + Buscador Rápido + Acciones */}
+          <div className="flex items-center gap-1.5 w-full">
             
-            {/* Live Search Input */}
-            <div className="relative flex-1 sm:w-64">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            {/* Mode Selector Chips */}
+            <div className="flex items-center gap-1 shrink-0">
+              {modes.map(m => {
+                const isActive = m.id === currentModeId;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => handleSelectMode(m.id)}
+                    className={`btn-press px-2.5 py-1 min-h-[32px] rounded-lg text-xs font-bold transition-all shrink-0 touch-manipulation border ${
+                      isActive
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                    }`}
+                    title={m.nombre}
+                  >
+                    {m.codigo}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Live Search Bar */}
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar arma o código (ej: XM4, SO-14)..."
-                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-100 transition-all"
+                placeholder="Buscar arma o código..."
+                className="w-full pl-7 pr-6 py-1 min-h-[32px] text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-100 transition-all"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3 h-3" />
                 </button>
               )}
             </div>
 
-            {/* View Switcher */}
-            <div className="flex items-center p-0.5 rounded-lg bg-slate-100 text-xs font-semibold text-slate-600 shrink-0">
+            {/* Secondary Action Icons */}
+            <div className="flex items-center gap-1 shrink-0">
               <button
-                onClick={() => setActiveView('dashboard')}
-                className={`px-3 py-1.5 min-h-[30px] rounded-md flex items-center gap-1.5 transition-all ${
-                  activeView === 'dashboard'
-                    ? 'bg-white text-blue-600 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="btn-press p-1.5 min-h-[32px] min-w-[32px] rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center transition-colors"
+                title="Paleta de Comandos (Ctrl+K)"
+                aria-label="Buscar comandos"
               >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span className="hidden xs:inline">Catálogo</span>
+                <Search className="w-3.5 h-3.5" />
               </button>
-              <button
-                onClick={() => setActiveView('tree')}
-                className={`px-3 py-1.5 min-h-[30px] rounded-md flex items-center gap-1.5 transition-all ${
-                  activeView === 'tree'
-                    ? 'bg-white text-blue-600 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <FolderTree className="w-3.5 h-3.5" />
-                <span className="hidden xs:inline">Jerarquía</span>
-              </button>
-              <button
-                onClick={() => setActiveView('global')}
-                className={`px-3 py-1.5 min-h-[30px] rounded-md flex items-center gap-1.5 transition-all ${
-                  activeView === 'global'
-                    ? 'bg-white text-blue-600 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span className="hidden xs:inline">Matriz</span>
-              </button>
-            </div>
 
-            {/* Vault Desktop button */}
-            <div className="hidden sm:flex items-center gap-1.5">
               <button
                 onClick={() => setIsVaultOpen(true)}
-                className="btn-press flex items-center gap-1.5 px-3 py-1.5 min-h-[32px] rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-2xs transition-colors"
-                title="Bóveda de importación/exportación JSON y CSV"
+                className="btn-press p-1.5 min-h-[32px] min-w-[32px] rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center transition-colors"
+                title="Bóveda de Datos (JSON / CSV)"
+                aria-label="Importar y Exportar"
               >
-                <Download className="w-3.5 h-3.5 text-slate-500" />
-                <span>Bóveda</span>
+                <Download className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
+
+          {/* Línea 2: Fila Deslizable Táctil con Scroll Suave de Categorías */}
+          <div className="overflow-x-auto no-scrollbar touch-pan-x flex items-center gap-1.5 py-0.5 w-full">
+            {CATEGORY_CHIPS.map(cat => {
+              const isActive = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`btn-press px-2.5 py-1 min-h-[28px] rounded-lg text-xs font-semibold whitespace-nowrap border flex items-center gap-1 transition-all shrink-0 touch-manipulation ${
+                    isActive
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  {cat !== 'Todos' && getCategoryIcon(cat)}
+                  <span>{cat}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Submodos Consolidados: Pastillas Compactas de 1 solo toque */}
+          {currentMode?.submodos && currentMode.submodos.length > 0 && (
+            <div className="overflow-x-auto no-scrollbar touch-pan-x flex items-center gap-1.5 pt-1 border-t border-slate-100 w-full">
+              {currentMode.submodos.map(sm => {
+                const isActive = sm.id === currentSubmodeId;
+                return (
+                  <button
+                    key={sm.id}
+                    onClick={() => handleSelectSubmode(sm.id)}
+                    className={`btn-press px-2.5 py-0.5 min-h-[26px] rounded-full text-[11px] font-bold whitespace-nowrap border transition-all shrink-0 touch-manipulation ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 border-blue-300 ring-1 ring-blue-200'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {sm.nombre}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </header>
 
-      {/* Main App Container */}
-      <main className="max-w-[96rem] mx-auto w-full px-4 sm:px-6 md:px-8 py-4 flex-1 flex flex-col gap-4">
+      {/* Main Content Area (Zero Stats Bloat, Ultra-Compact for Pop-up) */}
+      <main className="max-w-[96rem] mx-auto w-full px-2 sm:px-4 md:px-6 py-2.5 flex-1 flex flex-col gap-3">
         
         {loading ? (
-          <SkeletonLoader count={6} />
+          <SkeletonLoader count={4} />
         ) : activeView === 'tree' ? (
           <HierarchyTree
             modes={modes}
@@ -549,21 +640,16 @@ export default function CodManager() {
             onUpdateRating={handleUpdateRating}
           />
         ) : activeView === 'global' ? (
-          /* Matrix View */
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-blue-600" />
-                  <span>Matriz Global Consolidada</span>
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Exploración de armamento en los 3 grupos competitivos
-                </p>
-              </div>
+          /* Matrix Global View */
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200">
+              <h2 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-blue-600" />
+                <span>Matriz Global Consolidada</span>
+              </h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {modes.flatMap(m => 
                 (m.submodos || []).flatMap(sm => 
                   (sm.clases || []).flatMap(cl => 
@@ -586,21 +672,21 @@ export default function CodManager() {
                        item.codes.some(c => c.codigo.toLowerCase().includes(q));
               })
               .map(item => (
-                <div key={`${item.submodeName}-${item.weaponId}`} className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+                <div key={`${item.submodeName}-${item.weaponId}`} className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">{item.weaponName}</h4>
-                      <span className="text-[11px] font-medium text-slate-500">{item.className}</span>
+                      <h4 className="text-xs font-bold text-slate-900">{item.weaponName}</h4>
+                      <span className="text-[10px] text-slate-500">{item.className}</span>
                     </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 max-w-[130px] truncate">
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
                       {item.submodeName}
                     </span>
                   </div>
 
-                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
                     {item.codes.map(cd => (
-                      <div key={cd.id} className="p-2 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-bold text-slate-900 truncate">{cd.codigo}</span>
+                      <div key={cd.id} className="p-1.5 rounded bg-slate-50 border border-slate-200 flex items-center justify-between gap-1.5">
+                        <span className="font-mono text-[11px] font-bold text-slate-900 truncate">{cd.codigo}</span>
                         <QuickCopyButton textToCopy={cd.codigo} size="sm" />
                       </div>
                     ))}
@@ -610,257 +696,176 @@ export default function CodManager() {
             </div>
           </div>
         ) : (
-          /* Streamlined 1-Click Fast Dashboard */
-          <div className="space-y-4">
+          /* Streamlined 1-Click Fast Cards List (Sorted Descending by Rating) */
+          <div className="space-y-2.5 w-full">
             
-            {/* 2. Unified Quick Selection Bar (Mode + Consolidated 3 Submodes + Category Chips) */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 shadow-xs space-y-3">
-              
-              {/* Row 1: Mode Selector (MJ, BR, ZM) & Submodes (3 Official Competitive Groups) */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                
-                {/* Mode Selector */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0">
-                    Modo:
-                  </span>
-                  {modes.map(m => {
-                    const isActive = m.id === currentModeId;
-                    return (
-                      <button
-                        key={m.id}
-                        onClick={() => handleSelectMode(m.id)}
-                        className={`btn-press px-3 py-1.5 min-h-[34px] rounded-lg text-xs font-bold whitespace-nowrap border transition-all touch-manipulation flex items-center gap-1.5 shrink-0 ${
-                          isActive
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <span>{m.nombre}</span>
-                        <span className={`text-[10px] font-mono px-1 py-0.2 rounded ${
-                          isActive ? 'bg-blue-700 text-blue-100' : 'bg-slate-200 text-slate-600'
-                        }`}>
-                          {m.codigo}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+            {/* Quick Action bar with Weapon Count & Add Weapon */}
+            <div className="flex items-center justify-between px-1 text-xs text-slate-500 font-medium">
+              <span>{displayedWeapons.length} armas • Ordenadas por Calificación ★</span>
+              <button
+                onClick={() => handleOpenAddWeapon(selectedCategory)}
+                className="btn-press px-2.5 py-1 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-1 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Nueva Arma</span>
+              </button>
+            </div>
 
-                {/* The 3 Official Consolidated Submodes */}
-                {currentMode?.submodos && currentMode.submodos.length > 0 && (
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0">
-                      Submodo:
-                    </span>
-                    {currentMode.submodos.map(sm => {
-                      const isActive = sm.id === currentSubmodeId;
-                      return (
-                        <button
-                          key={sm.id}
-                          onClick={() => handleSelectSubmode(sm.id)}
-                          className={`btn-press px-3 py-1.5 min-h-[34px] rounded-lg text-xs font-bold whitespace-nowrap border transition-all touch-manipulation shrink-0 ${
-                            isActive
-                              ? 'bg-blue-50 text-blue-700 border-blue-300 ring-1 ring-blue-200'
-                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                          }`}
-                        >
-                          {sm.nombre}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Row 2: Category Chips (Direct Horizontal Bar) */}
-              <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pt-0.5">
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {CATEGORY_CHIPS.map(cat => {
-                    const isActive = selectedCategory === cat;
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`btn-press px-3 py-1.5 min-h-[36px] rounded-xl text-xs font-bold whitespace-nowrap border flex items-center gap-1.5 transition-all touch-manipulation shrink-0 ${
-                          isActive
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {cat !== 'Todas' && getCategoryIcon(cat)}
-                        <span>{cat}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
+            {displayedWeapons.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl bg-white border border-slate-200 text-slate-400 space-y-2">
+                <Crosshair className="w-8 h-8 mx-auto text-slate-300" />
+                <h4 className="text-xs font-bold text-slate-700">
+                  No se encontraron armas coincidentes
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Cambia de categoría o añade una nueva arma a este submodo.
+                </p>
                 <button
                   onClick={() => handleOpenAddWeapon(selectedCategory)}
-                  className="btn-press px-3 py-1.5 min-h-[36px] rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors"
+                  className="btn-press px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Nueva Arma</span>
+                  + Añadir Arma
                 </button>
               </div>
-            </div>
-
-            {/* 3. Direct Weapon Cards Grid (Codes Immediately Visible, 1-Click Copy) */}
-            <div>
-              {displayedWeapons.length === 0 ? (
-                <div className="p-12 text-center rounded-2xl bg-white border border-slate-200 text-slate-400 space-y-3">
-                  <Crosshair className="w-10 h-10 mx-auto text-slate-300" />
-                  <h4 className="text-sm font-bold text-slate-700">
-                    No se encontraron armas con los filtros actuales
-                  </h4>
-                  <p className="text-xs text-slate-500">
-                    Intenta cambiar la categoría o añadir una nueva arma a este submodo.
-                  </p>
-                  <button
-                    onClick={() => handleOpenAddWeapon(selectedCategory)}
-                    className="btn-press px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold"
+            ) : (
+              /* Ultra-Optimized Grid for Mobile Pop-up Window & Desktop (1 col mobile, 2 tablet, 3-4 desktop) */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 w-full">
+                {displayedWeapons.map((weapon) => (
+                  <div
+                    key={weapon.weaponId}
+                    className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm hover:shadow-md hover:border-blue-300 transition-all space-y-2.5 flex flex-col justify-between w-full"
                   >
-                    + Añadir Arma
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-                  {displayedWeapons.map((weapon) => (
-                    <div
-                      key={weapon.weaponId}
-                      className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all space-y-3.5 flex flex-col justify-between"
-                    >
-                      {/* Weapon Header */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                              {getCategoryIcon(weapon.className)}
-                            </div>
-                            <div className="min-w-0">
-                              <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
-                                <InlineEditable
-                                  value={weapon.weaponName}
-                                  onSave={(newName) => handleUpdateWeaponName(weapon.weaponId, newName)}
-                                  isTitle={true}
-                                />
-                              </h3>
-                              <span className="text-[11px] font-medium text-slate-500">
-                                {weapon.className}
-                              </span>
-                            </div>
+                    {/* Weapon Card Header */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                            {getCategoryIcon(weapon.className)}
                           </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 max-w-[120px] truncate">
-                              {weapon.submodeName}
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-bold text-slate-900 truncate">
+                              <InlineEditable
+                                value={weapon.weaponName}
+                                onSave={(newName) => handleUpdateWeaponName(weapon.weaponId, newName)}
+                                isTitle={true}
+                              />
+                            </h3>
+                            <span className="text-[10px] font-medium text-slate-500">
+                              {weapon.className}
                             </span>
-                            <button
-                              onClick={() => handleDeleteWeapon(weapon.weaponId)}
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                              title="Eliminar arma"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
                           </div>
                         </div>
 
-                        {/* Gunsmith Codes & 1-Click Copy Controls */}
-                        <div className="space-y-2.5 pt-1">
-                          {weapon.codes.length > 0 ? (
-                            weapon.codes.map((cd) => (
-                              <div
-                                key={cd.id}
-                                className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2"
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                    Armero
-                                  </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 max-w-[100px] truncate">
+                            {weapon.submodeName}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteWeapon(weapon.weaponId)}
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                            title="Eliminar arma"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
 
-                                  {/* Star Rating Interactive Bar */}
-                                  <div className="flex items-center gap-0.5 bg-white px-1.5 py-0.5 rounded-md border border-slate-200 shadow-2xs">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <button
-                                        key={star}
-                                        type="button"
-                                        onClick={() => handleUpdateRating(cd.id, star)}
-                                        className="p-0.5 focus:outline-none hover:scale-110 transition-transform"
-                                        title={`Calificar con ${star} estrellas`}
-                                      >
-                                        <Star
-                                          className={`w-3 h-3 ${
-                                            star <= (cd.calificacion || 5)
-                                              ? 'text-amber-400 fill-amber-400'
-                                              : 'text-slate-200'
-                                          }`}
-                                        />
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
+                      {/* Codes List (Immediately Visible with 1-Click Thumb Copy) */}
+                      <div className="space-y-2">
+                        {weapon.codes.length > 0 ? (
+                          weapon.codes.map((cd) => (
+                            <div
+                              key={cd.id}
+                              className="p-2 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5"
+                            >
+                              {/* Rating & Label */}
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                  Armero
+                                </span>
 
-                                {/* Code Display Monospace Box */}
-                                <div className="font-mono text-xs sm:text-sm font-bold text-slate-900 bg-white p-2 rounded-lg border border-slate-200 select-all truncate">
-                                  <InlineEditable
-                                    value={cd.codigo}
-                                    onSave={(newCode) => handleUpdateCode(cd.id, newCode)}
-                                  />
-                                </div>
-
-                                {/* 1-Click Fast Copy Action (≥44px Touch Target) */}
-                                <div className="flex items-center gap-2 pt-0.5">
-                                  <QuickCopyButton textToCopy={cd.codigo} showFullLabel={true} />
-                                  <button
-                                    onClick={() => handleDeleteCode(cd.id)}
-                                    className="p-2.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 bg-white transition-colors"
-                                    title="Eliminar código"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                {/* Clickable Rating Stars */}
+                                <div className="flex items-center gap-0.5 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                      key={star}
+                                      type="button"
+                                      onClick={() => handleUpdateRating(cd.id, star)}
+                                      className="p-0.5 focus:outline-none hover:scale-125 transition-transform"
+                                      title={`Calificar con ${star} estrellas`}
+                                    >
+                                      <Star
+                                        className={`w-3 h-3 ${
+                                          star <= (cd.calificacion || 5)
+                                            ? 'text-amber-400 fill-amber-400'
+                                            : 'text-slate-200'
+                                        }`}
+                                      />
+                                    </button>
+                                  ))}
                                 </div>
                               </div>
-                            ))
-                          ) : (
-                            <div className="p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-500 font-medium">
-                              Sin códigos registrados
-                            </div>
-                          )}
-                        </div>
-                      </div>
 
-                      {/* Quick Add Code Input */}
-                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                        <input
-                          type="text"
-                          value={newCodeInputs[weapon.weaponId] || ''}
-                          onChange={(e) =>
-                            setNewCodeInputs(prev => ({
-                              ...prev,
-                              [weapon.weaponId]: e.target.value.toUpperCase(),
-                            }))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleAddCodeToWeapon(weapon.weaponId, newCodeInputs[weapon.weaponId] || '');
-                            }
-                          }}
-                          placeholder="Nuevo código alfanumérico..."
-                          className="flex-1 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-mono uppercase text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-100"
-                        />
-                        <button
-                          onClick={() => handleAddCodeToWeapon(weapon.weaponId, newCodeInputs[weapon.weaponId] || '')}
-                          className="btn-press px-3 py-1.5 min-h-[32px] rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center gap-1 transition-colors shrink-0"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>+ Código</span>
-                        </button>
+                              {/* Monospace Code Display Box */}
+                              <div className="font-mono text-xs font-bold text-slate-800 bg-white px-2 py-1 rounded border border-slate-200 select-all truncate">
+                                <InlineEditable
+                                  value={cd.codigo}
+                                  onSave={(newCode) => handleUpdateCode(cd.id, newCode)}
+                                />
+                              </div>
+
+                              {/* 1-Click Large Copy Button (≥44px height for touch thumb) */}
+                              <div className="flex items-center gap-1.5 pt-0.5">
+                                <QuickCopyButton textToCopy={cd.codigo} label="Copiar" />
+                                <button
+                                  onClick={() => handleDeleteCode(cd.id)}
+                                  className="p-2.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 bg-white transition-colors"
+                                  title="Eliminar código"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-2 rounded bg-slate-50 border border-dashed border-slate-200 text-center text-[11px] text-slate-400">
+                            Sin códigos registrados
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+
+                    {/* Quick Add Code Inline Input */}
+                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-100">
+                      <input
+                        type="text"
+                        value={newCodeInputs[weapon.weaponId] || ''}
+                        onChange={(e) =>
+                          setNewCodeInputs(prev => ({
+                            ...prev,
+                            [weapon.weaponId]: e.target.value.toUpperCase(),
+                          }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddCodeToWeapon(weapon.weaponId, newCodeInputs[weapon.weaponId] || '');
+                          }
+                        }}
+                        placeholder="Nuevo código..."
+                        className="flex-1 px-2 py-1 rounded bg-slate-50 border border-slate-200 text-xs font-mono uppercase text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-100"
+                      />
+                      <button
+                        onClick={() => handleAddCodeToWeapon(weapon.weaponId, newCodeInputs[weapon.weaponId] || '')}
+                        className="btn-press px-2.5 py-1 min-h-[30px] rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold flex items-center gap-1 transition-colors shrink-0"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Añadir</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -869,10 +874,10 @@ export default function CodManager() {
       {isWeaponModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Crosshair className="w-4 h-4 text-blue-600" />
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-xs font-bold text-slate-900">
                   Registrar Arma en {currentSubmode?.nombre}
                 </h3>
               </div>
@@ -884,24 +889,24 @@ export default function CodManager() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveWeaponModal} className="p-5 space-y-4">
+            <form onSubmit={handleSaveWeaponModal} className="p-4 space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Categoría de Arma
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Categoría
                 </label>
                 <select
                   value={modalWeaponClass}
                   onChange={(e) => setModalWeaponClass(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 outline-none focus:border-blue-500"
                 >
-                  {CATEGORY_CHIPS.filter(c => c !== 'Todas').map(cat => (
+                  {CATEGORY_CHIPS.filter(c => c !== 'Todos').map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Nombre del Arma
                 </label>
                 <input
@@ -910,40 +915,37 @@ export default function CodManager() {
                   autoFocus
                   value={modalWeaponName}
                   onChange={(e) => setModalWeaponName(e.target.value)}
-                  placeholder="ej. XM4, DL Q33, Type 19, VMP..."
-                  className="w-full px-3.5 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  placeholder="ej. XM4, DL Q33, Type 19..."
+                  className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700">
-                    Código de Armero (Opcional)
-                  </label>
-                  <span className="text-[10px] font-mono text-slate-400">ALFANUMÉRICO</span>
-                </div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Código de Armero (Opcional)
+                </label>
                 <input
                   type="text"
                   value={modalCodeValue}
                   onChange={(e) => setModalCodeValue(e.target.value.toUpperCase())}
                   placeholder="ej. XM4-1A2G4E8F9E"
-                  className="w-full px-3.5 py-2 rounded-lg bg-white border border-slate-300 text-xs font-mono uppercase text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-mono uppercase text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsWeaponModalOpen(false)}
-                  className="btn-press px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg touch-manipulation"
+                  className="btn-press px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg touch-manipulation"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="btn-press px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs touch-manipulation"
+                  className="btn-press px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs touch-manipulation"
                 >
-                  Guardar Arma
+                  Guardar
                 </button>
               </div>
             </form>
@@ -953,10 +955,10 @@ export default function CodManager() {
 
       {/* Floating Tactical Toast HUD */}
       <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl shadow-lg border flex items-center gap-2.5 transition-all duration-200 max-w-[90vw] ${
+        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-3 py-2 rounded-xl shadow-lg border flex items-center gap-2 transition-all duration-200 max-w-[90vw] ${
           toast.show
             ? 'opacity-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 translate-y-3 pointer-events-none'
+            : 'opacity-0 translate-y-2 pointer-events-none'
         } ${
           toast.type === 'success'
             ? 'border-emerald-200 text-emerald-800 bg-emerald-50'
@@ -967,10 +969,10 @@ export default function CodManager() {
             : 'border-slate-800 text-white bg-slate-900'
         }`}
       >
-        {toast.type === 'success' && <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />}
-        {toast.type === 'error' && <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />}
-        {toast.type === 'warning' && <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />}
-        {toast.type === 'info' && <Info className="w-4 h-4 text-blue-400 shrink-0" />}
+        {toast.type === 'success' && <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+        {toast.type === 'error' && <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" />}
+        {toast.type === 'warning' && <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+        {toast.type === 'info' && <Info className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
         <span className="text-xs font-semibold truncate">{toast.message}</span>
       </div>
 

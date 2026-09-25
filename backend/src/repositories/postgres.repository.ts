@@ -31,21 +31,24 @@ export class PostgresCodRepository implements ICodRepository {
                             SELECT json_agg(
                               json_build_object(
                                 'id', cd.id,
-                                'codigo', cd.codigo
-                              )
+                                'codigo', cd.codigo,
+                                'calificacion', cd.calificacion
+                              ) ORDER BY cd.calificacion DESC NULLS LAST, cd.id ASC
                             ) FROM codigos cd WHERE cd.objeto_id = o.id
                           ), '[]'::json)
-                        )
+                        ) ORDER BY (
+                          SELECT COALESCE(MAX(cd.calificacion), 0) FROM codigos cd WHERE cd.objeto_id = o.id
+                        ) DESC, o.nombre ASC
                       ) FROM objetos o WHERE o.clase_id = c.id
                     ), '[]'::json)
-                  )
+                  ) ORDER BY c.id
                 ) FROM clases c WHERE c.submodo_id = s.id
               ), '[]'::json)
-            )
+            ) ORDER BY s.orden, s.id
           ) FROM submodos s WHERE s.modo_id = m.id
         ), '[]'::json)
       ) AS data
-      FROM modos m;
+      FROM modos m ORDER BY m.id;
     `;
     const res = await pgPool.query(query);
     return res.rows.map(r => r.data);
