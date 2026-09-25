@@ -59,7 +59,7 @@ export default function CodManager() {
   // Toast HUD
   const [toast, setToast] = useState<ToastNotification>({ show: false, message: '', type: 'info' });
 
-  // Global search input in header
+  // Global search filter
   const [searchFilter, setSearchFilter] = useState('');
 
   const showToast = (message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') => {
@@ -305,7 +305,7 @@ export default function CodManager() {
     }
   };
 
-  // Creation & Deletion of Nodes for Hierarchy Tree
+  // Creation & Deletion for Hierarchy Tree
   const handleCreateMode = async () => {
     const name = prompt('Nombre del nuevo modo:');
     if (!name?.trim()) return;
@@ -452,7 +452,7 @@ export default function CodManager() {
     }
   };
 
-  // Navigation from Command Palette
+  // Search selection
   const handleSelectSearchResult = async (item: SearchResultItem) => {
     setCurrentModeId(item.modeId);
     if (item.submodeId) {
@@ -520,53 +520,68 @@ export default function CodManager() {
   ) || [];
 
   return (
-    <div className="min-h-screen bg-[#060913] cyber-grid text-slate-100 flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen bg-[#060913] cyber-grid text-slate-100 flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200 pb-20 md:pb-8">
       
-      {/* Top Holographic Navigation Bar */}
-      <header className="sticky top-0 z-40 glass-panel-glow border-b border-cyan-500/20 px-4 md:px-8 py-3.5">
-        <div className="max-w-[96rem] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Top Holographic Navigation Bar (Sticky with mobile blur) */}
+      <header className="sticky top-0 z-40 glass-panel-glow border-b border-cyan-500/20 px-3 sm:px-6 md:px-8 py-3">
+        <div className="max-w-[96rem] mx-auto flex flex-col gap-3">
           
-          {/* Logo & Terminal Identity */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)]">
-                <Crosshair className="w-5 h-5 text-cyan-400 animate-spin-slow" />
+          {/* Main Brand & Action Row */}
+          <div className="flex items-center justify-between gap-2">
+            
+            {/* Logo */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)] shrink-0">
+                <Crosshair className="w-5 h-5 text-cyan-400" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-tactical uppercase tracking-wider font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-500">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-lg sm:text-xl font-tactical uppercase tracking-wider font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-500 truncate">
                     NexusCOD
                   </h1>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                    ONLINE
+                  <span className="hidden xs:inline-block text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                    v2.0
                   </span>
                 </div>
-                <p className="text-[11px] font-tactical uppercase tracking-widest text-slate-400">
-                  Terminal de Armamento y Loadouts Tácticos
+                <p className="hidden sm:block text-[10px] font-tactical uppercase tracking-widest text-slate-400 truncate">
+                  Terminal de Armamento Táctico
                 </p>
               </div>
             </div>
 
-            {/* Mobile View Toggle */}
-            <div className="md:hidden flex items-center gap-2">
+            {/* Quick Actions (Search & Vault) */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setIsCommandPaletteOpen(true)}
-                className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-cyan-400"
+                className="btn-press flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-cyan-300 text-xs font-tactical transition-all"
                 title="Búsqueda rápida (Ctrl+K)"
+                aria-label="Buscar armas"
               >
-                <Search className="w-4 h-4" />
+                <Search className="w-4 h-4 text-cyan-400" />
+                <span className="hidden md:inline">Buscar</span>
+                <kbd className="hidden lg:inline-block px-1.5 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-slate-400 border border-slate-700">
+                  Ctrl+K
+                </kbd>
+              </button>
+
+              <button
+                onClick={() => setIsVaultOpen(true)}
+                className="btn-press flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-xl bg-fuchsia-950/50 text-fuchsia-300 border border-fuchsia-500/30 hover:bg-fuchsia-900/40 hover:border-fuchsia-400 text-xs font-tactical uppercase tracking-wider font-bold shadow-[0_0_15px_rgba(217,70,239,0.15)]"
+                title="Bóveda de importación/exportación"
+                aria-label="Abrir bóveda"
+              >
+                <Terminal className="w-4 h-4 text-fuchsia-400" />
+                <span className="hidden sm:inline">Bóveda</span>
               </button>
             </div>
           </div>
 
-          {/* Quick Action Hub & Views */}
-          <div className="flex flex-wrap items-center gap-3">
-            
-            {/* View Selectors */}
-            <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-tactical uppercase tracking-wider font-bold">
+          {/* Views Selector Tabs */}
+          <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pt-1 border-t border-slate-800/60">
+            <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-tactical uppercase tracking-wider font-bold w-full sm:w-auto">
               <button
                 onClick={() => setActiveView('dashboard')}
-                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+                className={`flex-1 sm:flex-initial px-3.5 py-1.5 min-h-[36px] rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                   activeView === 'dashboard'
                     ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.5)]'
                     : 'text-slate-400 hover:text-slate-200'
@@ -577,96 +592,75 @@ export default function CodManager() {
               </button>
               <button
                 onClick={() => setActiveView('tree')}
-                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+                className={`flex-1 sm:flex-initial px-3.5 py-1.5 min-h-[36px] rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                   activeView === 'tree'
                     ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.5)]'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <FolderTree className="w-3.5 h-3.5" />
-                <span>Árbol Explorer</span>
+                <span>Árbol</span>
               </button>
               <button
                 onClick={() => setActiveView('global')}
-                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+                className={`flex-1 sm:flex-initial px-3.5 py-1.5 min-h-[36px] rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                   activeView === 'global'
                     ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.5)]'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Globe className="w-3.5 h-3.5" />
-                <span>Matriz Global</span>
+                <span>Matriz</span>
               </button>
             </div>
-
-            {/* Quick Command Trigger */}
-            <button
-              onClick={() => setIsCommandPaletteOpen(true)}
-              className="btn-press hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 hover:border-cyan-500/50 hover:text-cyan-300 text-xs font-tactical transition-all"
-            >
-              <Search className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Buscar armas...</span>
-              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-slate-400 border border-slate-700">
-                Ctrl+K
-              </kbd>
-            </button>
-
-            {/* Data Vault Trigger */}
-            <button
-              onClick={() => setIsVaultOpen(true)}
-              className="btn-press flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-fuchsia-950/40 text-fuchsia-300 border border-fuchsia-500/30 hover:bg-fuchsia-900/40 hover:border-fuchsia-400 text-xs font-tactical uppercase tracking-wider font-bold shadow-[0_0_15px_rgba(217,70,239,0.15)]"
-            >
-              <Terminal className="w-3.5 h-3.5" />
-              <span>Bóveda JSON/CSV</span>
-            </button>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <div className="max-w-[96rem] mx-auto w-full px-4 md:px-8 py-6 flex-1 flex flex-col gap-6">
+      <div className="max-w-[96rem] mx-auto w-full px-3 sm:px-6 md:px-8 py-4 sm:py-6 flex-1 flex flex-col gap-5 sm:gap-6">
         
-        {/* HUD Statistics Ribbon */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 rounded-2xl glass-panel border border-cyan-500/20 flex items-center justify-between">
+        {/* HUD Statistics Ribbon (Compact on mobile) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <div className="p-3 sm:p-4 rounded-2xl glass-panel border border-cyan-500/20 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-tactical uppercase tracking-widest text-slate-400">Modos Operativos</div>
-              <div className="text-2xl font-bold font-tactical text-white mt-0.5">{modes.length}</div>
+              <div className="text-[10px] sm:text-[11px] font-tactical uppercase tracking-widest text-slate-400">Modos</div>
+              <div className="text-xl sm:text-2xl font-bold font-tactical text-white mt-0.5">{modes.length}</div>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center font-bold">
               <Database className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl glass-panel border border-cyan-500/20 flex items-center justify-between">
+          <div className="p-3 sm:p-4 rounded-2xl glass-panel border border-cyan-500/20 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-tactical uppercase tracking-widest text-slate-400">Armas en Catálogo</div>
-              <div className="text-2xl font-bold font-tactical text-cyan-300 mt-0.5">{totalWeaponsCount}</div>
+              <div className="text-[10px] sm:text-[11px] font-tactical uppercase tracking-widest text-slate-400">Armas</div>
+              <div className="text-xl sm:text-2xl font-bold font-tactical text-cyan-300 mt-0.5">{totalWeaponsCount}</div>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold">
               <Crosshair className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl glass-panel border border-cyan-500/20 flex items-center justify-between">
+          <div className="p-3 sm:p-4 rounded-2xl glass-panel border border-cyan-500/20 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-tactical uppercase tracking-widest text-slate-400">Códigos Activos</div>
-              <div className="text-2xl font-bold font-tactical text-fuchsia-300 mt-0.5">{totalCodesCount}</div>
+              <div className="text-[10px] sm:text-[11px] font-tactical uppercase tracking-widest text-slate-400">Códigos</div>
+              <div className="text-xl sm:text-2xl font-bold font-tactical text-fuchsia-300 mt-0.5">{totalCodesCount}</div>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-fuchsia-500/20 text-fuchsia-300 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-fuchsia-500/20 text-fuchsia-300 flex items-center justify-center font-bold">
               <Activity className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl glass-panel border border-cyan-500/20 flex items-center justify-between">
+          <div className="p-3 sm:p-4 rounded-2xl glass-panel border border-cyan-500/20 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-tactical uppercase tracking-widest text-slate-400">Rating Promedio</div>
-              <div className="text-2xl font-bold font-tactical text-amber-400 mt-0.5 flex items-center gap-1.5">
+              <div className="text-[10px] sm:text-[11px] font-tactical uppercase tracking-widest text-slate-400">Rating</div>
+              <div className="text-xl sm:text-2xl font-bold font-tactical text-amber-400 mt-0.5 flex items-center gap-1">
                 <span>{avgRating}</span>
-                <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
               </div>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold">
               <Award className="w-4 h-4" />
             </div>
           </div>
@@ -697,14 +691,14 @@ export default function CodManager() {
         ) : activeView === 'global' ? (
           /* Matrix Global View */
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl glass-panel border border-cyan-500/20">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl glass-panel border border-cyan-500/20">
               <div>
-                <h2 className="text-lg font-tactical uppercase tracking-wider font-bold text-white flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-tactical uppercase tracking-wider font-bold text-white flex items-center gap-2">
                   <Globe className="w-5 h-5 text-cyan-400" />
-                  <span>Matriz Global de Armamento &amp; Calificaciones</span>
+                  <span>Matriz Global de Armas</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Visualización consolidada de todas las armas clasificadas por estrellas en los modos activos
+                  Catálogo consolidado con todas las armas y calificaciones
                 </p>
               </div>
 
@@ -715,22 +709,22 @@ export default function CodManager() {
                   value={searchFilter}
                   onChange={(e) => setSearchFilter(e.target.value)}
                   placeholder="Filtrar por arma o código..."
-                  className="w-full pl-9 pr-4 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-cyan-200 outline-none focus:border-cyan-400"
+                  className="w-full pl-9 pr-4 py-2 min-h-[40px] rounded-xl bg-slate-900 border border-slate-800 text-base sm:text-xs text-cyan-200 outline-none focus:border-cyan-400"
                 />
               </div>
             </div>
 
             {filteredAggregatedKeys.length === 0 ? (
-              <div className="p-12 text-center rounded-2xl glass-panel text-slate-500">
+              <div className="p-10 text-center rounded-2xl glass-panel text-slate-500">
                 <Crosshair className="w-10 h-10 mx-auto mb-3 opacity-40 text-slate-600" />
-                <p className="text-sm font-tactical">No se encontraron armas registradas en la matriz global</p>
+                <p className="text-sm font-tactical">No se encontraron armas en la matriz global</p>
               </div>
             ) : (
               filteredAggregatedKeys.map((category) => (
-                <div key={category} className="space-y-4">
-                  <div className="flex items-center gap-3 pb-2 border-b border-cyan-500/20">
+                <div key={category} className="space-y-3">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-cyan-500/20">
                     <Layers className="w-4 h-4 text-cyan-400" />
-                    <h3 className="text-base font-tactical uppercase tracking-wider font-bold text-white">
+                    <h3 className="text-sm sm:text-base font-tactical uppercase tracking-wider font-bold text-white">
                       {category}
                     </h3>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
@@ -738,7 +732,7 @@ export default function CodManager() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {groupedAggregated[category].map((weapon: any) => (
                       <div
                         key={weapon.objeto_id}
@@ -747,7 +741,7 @@ export default function CodManager() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
-                            <h4 className="font-tactical text-base font-bold text-white uppercase tracking-wide">
+                            <h4 className="font-tactical text-sm sm:text-base font-bold text-white uppercase tracking-wide">
                               {weapon.objeto_nombre}
                             </h4>
                           </div>
@@ -761,31 +755,35 @@ export default function CodManager() {
                             weapon.codigos.map((cd: any) => (
                               <div
                                 key={cd.id}
-                                className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-2"
+                                className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2"
                               >
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-xs font-bold text-cyan-300">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-mono text-xs font-bold text-cyan-300 truncate">
                                     {cd.codigo}
                                   </span>
                                   <QuickCopyButton textToCopy={cd.codigo} size="sm" />
                                 </div>
 
-                                <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-md border border-slate-800">
-                                  {[1, 2, 3, 4, 5].map((star) => (
-                                    <button
-                                      key={star}
-                                      onClick={() => handleUpdateRating(cd.id, star)}
-                                      className="focus:outline-none hover:scale-125 transition-transform"
-                                    >
-                                      <Star
-                                        className={`w-3.5 h-3.5 ${
-                                          star <= (cd.calificacion || 0)
-                                            ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]'
-                                            : 'text-slate-800'
-                                        }`}
-                                      />
-                                    </button>
-                                  ))}
+                                <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
+                                  <div className="flex items-center gap-0.5 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => handleUpdateRating(cd.id, star)}
+                                        className="p-1 min-w-[28px] min-h-[28px] flex items-center justify-center focus:outline-none transition-transform active:scale-125 touch-manipulation"
+                                        title={`Calificar con ${star} estrellas`}
+                                      >
+                                        <Star
+                                          className={`w-3.5 h-3.5 ${
+                                            star <= (cd.calificacion || 0)
+                                              ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]'
+                                              : 'text-slate-800'
+                                          }`}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
                             ))
@@ -802,51 +800,49 @@ export default function CodManager() {
           </div>
         ) : (
           /* Tactical Dashboard View */
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             
             {/* Mode & Submode Selector Controls */}
-            <div className="glass-panel rounded-2xl p-4 border border-cyan-500/20 space-y-4">
+            <div className="glass-panel rounded-2xl p-3.5 sm:p-4 border border-cyan-500/20 space-y-3.5">
               
-              {/* Mode Tabs */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                  {modes.map((m) => {
-                    const isActive = m.id === currentModeId;
-                    return (
-                      <button
-                        key={m.id}
-                        onClick={() => handleSelectMode(m.id)}
-                        className={`btn-press px-4 py-2 rounded-xl text-xs font-tactical uppercase tracking-wider font-bold whitespace-nowrap transition-all border ${
-                          isActive
-                            ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)]'
-                            : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
-                        }`}
-                      >
-                        <span>{m.nombre}</span>
-                        <span className="ml-2 opacity-70 font-mono text-[10px]">[{m.codigo}]</span>
-                      </button>
-                    );
-                  })}
+              {/* Mode Tabs (Touch horizontal scroll) */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 overscroll-x-contain touch-pan-x">
+                {modes.map((m) => {
+                  const isActive = m.id === currentModeId;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => handleSelectMode(m.id)}
+                      className={`btn-press px-4 py-2 min-h-[42px] rounded-xl text-xs font-tactical uppercase tracking-wider font-bold whitespace-nowrap transition-all border shrink-0 touch-manipulation ${
+                        isActive
+                          ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)]'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
+                      }`}
+                    >
+                      <span>{m.nombre}</span>
+                      <span className="ml-1.5 opacity-70 font-mono text-[10px]">[{m.codigo}]</span>
+                    </button>
+                  );
+                })}
 
-                  <button
-                    onClick={handleCreateMode}
-                    className="btn-press px-3 py-2 rounded-xl text-xs font-tactical uppercase tracking-wider font-semibold border border-dashed border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 whitespace-nowrap"
-                  >
-                    + Nuevo Modo
-                  </button>
-                </div>
+                <button
+                  onClick={handleCreateMode}
+                  className="btn-press px-3.5 py-2 min-h-[42px] rounded-xl text-xs font-tactical uppercase tracking-wider font-semibold border border-dashed border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 whitespace-nowrap shrink-0 touch-manipulation"
+                >
+                  + Modo
+                </button>
               </div>
 
-              {/* Submode Pills */}
+              {/* Submode Pills (Touch horizontal scroll) */}
               {currentMode?.submodos && currentMode.submodos.length > 0 && (
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-2 border-t border-slate-800/80">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-2 border-t border-slate-800/80 overscroll-x-contain touch-pan-x">
                   {currentMode.submodos.map((sm) => {
                     const isActive = sm.id === currentSubmodeId;
                     return (
                       <button
                         key={sm.id}
                         onClick={() => handleSelectSubmode(sm.id)}
-                        className={`btn-press px-3 py-1 rounded-full text-xs font-tactical uppercase tracking-wider font-semibold flex items-center gap-2 whitespace-nowrap border transition-all ${
+                        className={`btn-press px-3.5 py-1.5 min-h-[36px] rounded-full text-xs font-tactical uppercase tracking-wider font-semibold flex items-center gap-2 whitespace-nowrap border transition-all shrink-0 touch-manipulation ${
                           isActive
                             ? 'bg-blue-600/90 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.4)]'
                             : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
@@ -864,7 +860,7 @@ export default function CodManager() {
 
                   <button
                     onClick={() => handleCreateSubmode(currentMode.id)}
-                    className="btn-press px-2.5 py-1 rounded-full text-[11px] font-tactical uppercase tracking-wider border border-dashed border-slate-700 text-slate-400 hover:text-cyan-300"
+                    className="btn-press px-3 py-1.5 min-h-[36px] rounded-full text-[11px] font-tactical uppercase tracking-wider border border-dashed border-slate-700 text-slate-400 hover:text-cyan-300 shrink-0 touch-manipulation"
                   >
                     + Submodo
                   </button>
@@ -874,14 +870,14 @@ export default function CodManager() {
 
             {/* Breadcrumb Path & Category Quick Selection */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl glass-panel border border-slate-800 text-xs">
-              <div className="flex items-center gap-2 text-slate-400 font-tactical uppercase tracking-wider">
-                <span className="text-white font-bold">{currentMode?.nombre || 'Modo'}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                <span className="text-cyan-300 font-bold">{currentSubmode?.nombre || 'Submodo'}</span>
+              <div className="flex items-center gap-2 text-slate-400 font-tactical uppercase tracking-wider overflow-x-auto no-scrollbar py-0.5">
+                <span className="text-white font-bold whitespace-nowrap">{currentMode?.nombre || 'Modo'}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                <span className="text-cyan-300 font-bold whitespace-nowrap">{currentSubmode?.nombre || 'Submodo'}</span>
                 {!isDefaultSubmode && currentClass && (
                   <>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                    <span className="text-fuchsia-400 font-bold">{currentClass.nombre}</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                    <span className="text-fuchsia-400 font-bold whitespace-nowrap">{currentClass.nombre}</span>
                   </>
                 )}
               </div>
@@ -890,17 +886,18 @@ export default function CodManager() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsClassDrawerOpen(true)}
-                    className="btn-press px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/30 text-xs font-tactical uppercase tracking-wider font-semibold flex items-center gap-2"
+                    className="btn-press w-full sm:w-auto px-3.5 py-2 min-h-[42px] sm:min-h-[36px] rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/30 text-xs font-tactical uppercase tracking-wider font-semibold flex items-center justify-center gap-2 touch-manipulation"
                   >
-                    <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Cambiar Clase ({currentClass?.nombre || 'Seleccionar'})</span>
-                    <SlidersHorizontal className="w-3 h-3 text-slate-400" />
+                    <Layers className="w-4 h-4 text-cyan-400" />
+                    <span>Categorías ({currentClass?.nombre || 'Seleccionar'})</span>
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
                   </button>
                   {currentSubmode && (
                     <button
                       onClick={() => handleCreateClass(currentSubmode.id)}
-                      className="btn-press p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 border border-cyan-500/30"
-                      title="Crear nueva clase en este submodo"
+                      className="btn-press min-w-[42px] min-h-[42px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 border border-cyan-500/30 touch-manipulation shrink-0"
+                      title="Crear nueva clase"
+                      aria-label="Crear nueva clase"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -911,12 +908,12 @@ export default function CodManager() {
 
             {/* Slots Grid Area */}
             {isDefaultSubmode ? (
-              /* If submode is Predeterminado / Global, show aggregated classes */
+              /* Predeterminado Global View */
               <div className="space-y-6">
-                <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-300 text-xs font-tactical flex items-center gap-3">
+                <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-300 text-xs font-tactical flex items-center gap-3">
                   <Info className="w-4 h-4 text-amber-400 shrink-0" />
                   <span>
-                    Vista predeterminada global activa: Visualizando todas las armas agregadas de los submodos.
+                    Vista predeterminada activa: Visualizando todas las armas agregadas de los submodos.
                   </span>
                 </div>
 
@@ -926,7 +923,7 @@ export default function CodManager() {
                       <Layers className="w-4 h-4 text-cyan-400" />
                       <span>{catName}</span>
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {groupedAggregated[catName].map((item: any) => (
                         <div key={item.objeto_id} className="glass-panel rounded-2xl p-4 border border-cyan-500/20 space-y-3">
                           <div className="flex items-center justify-between">
@@ -937,19 +934,9 @@ export default function CodManager() {
                           </div>
                           <div className="space-y-2 pt-2 border-t border-slate-800">
                             {item.codigos?.map((cd: any) => (
-                              <div key={cd.id} className="p-2 rounded-lg bg-slate-900 flex items-center justify-between gap-2">
-                                <span className="font-mono text-xs text-cyan-300 font-bold">{cd.codigo}</span>
-                                <div className="flex items-center gap-2">
-                                  <QuickCopyButton textToCopy={cd.codigo} size="sm" />
-                                  <div className="flex items-center gap-0.5">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <Star
-                                        key={star}
-                                        className={`w-3 h-3 ${star <= (cd.calificacion || 0) ? 'text-amber-400 fill-amber-400' : 'text-slate-800'}`}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
+                              <div key={cd.id} className="p-2.5 rounded-xl bg-slate-900 flex items-center justify-between gap-2">
+                                <span className="font-mono text-xs text-cyan-300 font-bold truncate">{cd.codigo}</span>
+                                <QuickCopyButton textToCopy={cd.codigo} size="sm" />
                               </div>
                             ))}
                           </div>
@@ -960,21 +947,21 @@ export default function CodManager() {
                 ))}
               </div>
             ) : (
-              /* Specific Class Slots Grid (1..7 or maxSlot) */
+              /* Specific Class Slots Grid (1 col on mobile, 2 on tablet, 3-4 on desktop) */
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-tactical uppercase tracking-wider font-bold text-white flex items-center gap-2">
+                    <h2 className="text-base sm:text-lg font-tactical uppercase tracking-wider font-bold text-white flex items-center gap-2">
                       <Crosshair className="w-5 h-5 text-cyan-400" />
                       <span>{currentClass?.nombre || 'Armamento Asignado'}</span>
                     </h2>
                     <p className="text-xs text-slate-400 font-tactical">
-                      {Object.keys(slotsData).length} armas registradas en los slots tácticos
+                      {Object.keys(slotsData).length} armas registradas en los slots
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                   {(() => {
                     const maxSlot = Math.max(7, ...Object.keys(slotsData).map(Number));
                     const slotsArray = Array.from({ length: maxSlot }, (_, i) => i + 1);
@@ -1004,23 +991,51 @@ export default function CodManager() {
         )}
       </div>
 
-      {/* Class Selector Drawer / Modal */}
+      {/* Floating Action Button on Mobile for Quick Category Drawer */}
+      {!isDefaultSubmode && activeView === 'dashboard' && (
+        <div className="md:hidden fixed bottom-6 right-4 z-40">
+          <button
+            onClick={() => setIsClassDrawerOpen(true)}
+            className="btn-press flex items-center gap-2 px-4 py-3 min-h-[48px] rounded-full bg-cyan-500 text-slate-950 font-tactical uppercase tracking-wider font-bold shadow-[0_0_25px_rgba(6,182,212,0.6)] border border-cyan-300 touch-manipulation"
+            aria-label="Abrir categorías de armas"
+          >
+            <Layers className="w-5 h-5" />
+            <span>Categorías</span>
+            <span className="w-6 h-6 rounded-full bg-slate-950 text-cyan-300 text-xs flex items-center justify-center font-mono">
+              {currentSubmode?.clases?.length || 0}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Class Selector: Responsive Bottom Sheet on Mobile (<768px), Side Drawer on Desktop */}
       {isClassDrawerOpen && !isDefaultSubmode && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-slate-950 border-l border-cyan-500/30 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
-            <div className="p-5 border-b border-cyan-500/20 bg-slate-900/80 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-end md:items-stretch md:justify-end bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full md:max-w-sm max-h-[85vh] md:max-h-full rounded-t-3xl md:rounded-none bg-slate-950 border-t md:border-t-0 md:border-l border-cyan-500/30 flex flex-col shadow-2xl animate-in slide-in-from-bottom md:slide-in-from-right duration-200">
+            
+            {/* Mobile Drag Indicator Handle */}
+            <div className="md:hidden pt-3 pb-1 flex justify-center">
+              <div className="w-12 h-1.5 rounded-full bg-slate-700" />
+            </div>
+
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-cyan-500/20 bg-slate-900/80 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <Layers className="w-5 h-5 text-cyan-400" />
                 <h3 className="text-base font-tactical uppercase tracking-wider font-bold text-white">
                   Clases de Armamento
                 </h3>
               </div>
-              <button onClick={() => setIsClassDrawerOpen(false)} className="p-1 text-slate-400 hover:text-white">
+              <button
+                onClick={() => setIsClassDrawerOpen(false)}
+                className="min-w-[36px] min-h-[36px] flex items-center justify-center p-1 text-slate-400 hover:text-white rounded-lg touch-manipulation"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-4 border-b border-slate-800 bg-slate-950/60">
+            {/* Search filter in drawer */}
+            <div className="p-3.5 border-b border-slate-800 bg-slate-950/60">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
@@ -1028,12 +1043,13 @@ export default function CodManager() {
                   value={classFilterText}
                   onChange={(e) => setClassFilterText(e.target.value)}
                   placeholder="Filtrar clases..."
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-cyan-200 outline-none focus:border-cyan-400"
+                  className="w-full pl-9 pr-3 py-2 min-h-[40px] text-base sm:text-xs rounded-xl bg-slate-900 border border-slate-800 text-cyan-200 outline-none focus:border-cyan-400"
                 />
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+            {/* List of classes */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2 overscroll-contain">
               {filteredDrawerClasses.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 font-tactical text-xs">
                   No se encontraron clases coincidentes
@@ -1045,21 +1061,21 @@ export default function CodManager() {
                     <button
                       key={c.id}
                       onClick={() => handleSelectClass(c.id)}
-                      className={`btn-press w-full p-3 rounded-xl flex items-center justify-between border transition-all text-left ${
+                      className={`btn-press w-full p-3.5 min-h-[50px] rounded-xl flex items-center justify-between border transition-all text-left touch-manipulation ${
                         isSelected
                           ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/80 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
                           : 'bg-slate-900/40 text-slate-300 border-transparent hover:bg-slate-900 hover:border-slate-800'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                           isSelected ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-400'
                         }`}>
                           <Layers className="w-4 h-4" />
                         </div>
-                        <span className="text-xs font-tactical uppercase tracking-wide font-bold">{c.nombre}</span>
+                        <span className="text-sm font-tactical uppercase tracking-wide font-bold truncate">{c.nombre}</span>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-500">
+                      <span className="text-xs font-mono text-slate-500">
                         {c.objetos?.length || 0} armas
                       </span>
                     </button>
@@ -1069,12 +1085,12 @@ export default function CodManager() {
             </div>
 
             {currentSubmode && (
-              <div className="p-4 border-t border-slate-800 bg-slate-950">
+              <div className="p-4 border-t border-slate-800 bg-slate-950 pb-safe">
                 <button
                   onClick={() => {
                     handleCreateClass(currentSubmode.id);
                   }}
-                  className="btn-press w-full py-2.5 px-4 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-tactical uppercase tracking-wider font-bold flex items-center justify-center gap-2"
+                  className="btn-press w-full py-3 px-4 min-h-[46px] rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-tactical uppercase tracking-wider font-bold flex items-center justify-center gap-2 touch-manipulation"
                 >
                   <Plus className="w-4 h-4" />
                   <span>+ Crear Nueva Clase</span>
@@ -1089,19 +1105,22 @@ export default function CodManager() {
       {isWeaponModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-md rounded-2xl glass-panel-glow border border-cyan-500/30 shadow-[0_0_50px_rgba(6,182,212,0.3)] overflow-hidden">
-            <div className="px-6 py-4 border-b border-cyan-500/20 bg-slate-900/90 flex items-center justify-between">
+            <div className="px-5 sm:px-6 py-4 border-b border-cyan-500/20 bg-slate-900/90 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <Crosshair className="w-5 h-5 text-cyan-400" />
                 <h3 className="text-base font-tactical uppercase tracking-wider font-bold text-white">
                   Registrar Arma en Slot #{activeSlotTarget}
                 </h3>
               </div>
-              <button onClick={() => setIsWeaponModalOpen(false)} className="p-1 text-slate-400 hover:text-white">
+              <button
+                onClick={() => setIsWeaponModalOpen(false)}
+                className="min-w-[36px] min-h-[36px] flex items-center justify-center p-1 text-slate-400 hover:text-white rounded-lg touch-manipulation"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveWeaponModal} className="p-6 space-y-4">
+            <form onSubmit={handleSaveWeaponModal} className="p-5 sm:p-6 space-y-4">
               <div>
                 <label className="block text-xs font-tactical uppercase tracking-wider font-bold text-slate-300 mb-1.5">
                   Nombre del Arma
@@ -1113,7 +1132,7 @@ export default function CodManager() {
                   value={modalWeaponName}
                   onChange={(e) => setModalWeaponName(e.target.value)}
                   placeholder="ej. M4, DL Q33, QQ9, Kilo 141..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-cyan-200 placeholder-slate-600 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                  className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-slate-950 border border-slate-800 text-base sm:text-xs text-cyan-200 placeholder-slate-600 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
                 />
               </div>
 
@@ -1129,7 +1148,7 @@ export default function CodManager() {
                   value={modalCodeValue}
                   onChange={(e) => setModalCodeValue(e.target.value.toUpperCase())}
                   placeholder="ej. M4-A9K3L7B0X1"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono uppercase text-cyan-300 placeholder-slate-600 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                  className="w-full px-3.5 py-2.5 min-h-[42px] rounded-xl bg-slate-950 border border-slate-800 text-base sm:text-xs font-mono uppercase text-cyan-300 placeholder-slate-600 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
                 />
               </div>
 
@@ -1137,13 +1156,13 @@ export default function CodManager() {
                 <button
                   type="button"
                   onClick={() => setIsWeaponModalOpen(false)}
-                  className="btn-press px-4 py-2 text-xs font-tactical uppercase tracking-wider font-semibold text-slate-400 hover:text-slate-200 rounded-xl"
+                  className="btn-press px-4 py-2.5 min-h-[42px] text-xs font-tactical uppercase tracking-wider font-semibold text-slate-400 hover:text-slate-200 rounded-xl touch-manipulation"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="btn-press px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-tactical uppercase tracking-wider font-bold shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                  className="btn-press px-5 py-2.5 min-h-[42px] rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-tactical uppercase tracking-wider font-bold shadow-[0_0_20px_rgba(6,182,212,0.4)] touch-manipulation"
                 >
                   Guardar Arma
                 </button>
@@ -1153,27 +1172,27 @@ export default function CodManager() {
         </div>
       )}
 
-      {/* Floating Tactical Toast HUD */}
+      {/* Floating Tactical Toast HUD (Above bottom safe area) */}
       <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl glass-panel-glow border shadow-2xl flex items-center gap-3 transition-all duration-200 ${
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl glass-panel-glow border shadow-2xl flex items-center gap-3 transition-all duration-200 max-w-[90vw] ${
           toast.show
             ? 'opacity-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 translate-y-3 pointer-events-none'
         } ${
           toast.type === 'success'
-            ? 'border-emerald-500/50 text-emerald-300 bg-slate-950/90'
+            ? 'border-emerald-500/50 text-emerald-300 bg-slate-950/95'
             : toast.type === 'error'
-            ? 'border-rose-500/50 text-rose-300 bg-slate-950/90'
+            ? 'border-rose-500/50 text-rose-300 bg-slate-950/95'
             : toast.type === 'warning'
-            ? 'border-amber-500/50 text-amber-300 bg-slate-950/90'
-            : 'border-cyan-500/50 text-cyan-300 bg-slate-950/90'
+            ? 'border-amber-500/50 text-amber-300 bg-slate-950/95'
+            : 'border-cyan-500/50 text-cyan-300 bg-slate-950/95'
         }`}
       >
         {toast.type === 'success' && <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />}
         {toast.type === 'error' && <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />}
         {toast.type === 'warning' && <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />}
         {toast.type === 'info' && <Info className="w-4 h-4 text-cyan-400 shrink-0" />}
-        <span className="text-xs font-tactical uppercase tracking-wider font-semibold">{toast.message}</span>
+        <span className="text-xs font-tactical uppercase tracking-wider font-semibold truncate">{toast.message}</span>
       </div>
 
       {/* Command Palette Modal */}

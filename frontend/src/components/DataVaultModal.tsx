@@ -285,14 +285,14 @@ export default function DataVaultModal({
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                 <button
                   onClick={handleCopyClipboard}
-                  className="btn-press w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-tactical uppercase tracking-wider font-bold flex items-center justify-center gap-2"
+                  className="btn-press w-full sm:flex-1 py-3 px-4 min-h-[46px] rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-slate-700 text-xs font-tactical uppercase tracking-wider font-bold flex items-center justify-center gap-2 touch-manipulation"
                 >
                   {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                   <span>{copied ? '¡Copiado!' : 'Copiar al Portapapeles'}</span>
                 </button>
                 <button
                   onClick={handleDownload}
-                  className="btn-press w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-tactical uppercase tracking-wider font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                  className="btn-press w-full sm:flex-1 py-3 px-4 min-h-[46px] rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-tactical uppercase tracking-wider font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] touch-manipulation"
                 >
                   <Download className="w-4 h-4" />
                   <span>Descargar Archivo</span>
@@ -313,7 +313,7 @@ export default function DataVaultModal({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full p-6 rounded-2xl border-2 border-dashed border-slate-700 hover:border-fuchsia-500/60 bg-slate-900/30 hover:bg-fuchsia-950/10 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer group"
+                  className="w-full p-6 min-h-[90px] rounded-2xl border-2 border-dashed border-slate-700 hover:border-fuchsia-500/60 bg-slate-900/30 hover:bg-fuchsia-950/10 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer group touch-manipulation"
                 >
                   <div className="w-10 h-10 rounded-full bg-slate-800 group-hover:bg-fuchsia-900/40 text-slate-400 group-hover:text-fuchsia-300 flex items-center justify-center transition-colors">
                     <Upload className="w-5 h-5" />
@@ -322,7 +322,7 @@ export default function DataVaultModal({
                     <span className="text-xs font-semibold text-slate-200 group-hover:text-fuchsia-300 font-tactical uppercase tracking-wider">
                       Cargar Archivo JSON / CSV
                     </span>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Haz clic para seleccionar o arrastra aquí</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Toca para seleccionar archivo</p>
                   </div>
                 </button>
               </div>
@@ -340,7 +340,7 @@ export default function DataVaultModal({
                     parseAndValidateImport(e.target.value);
                   }}
                   placeholder='[ { "codigo": "MJ", "nombre": "Multijugador", "submodos": [...] } ]'
-                  className="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-300 placeholder-slate-600 outline-none focus:border-fuchsia-500/60 focus:ring-1 focus:ring-fuchsia-500/30"
+                  className="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-base sm:text-xs font-mono text-cyan-300 placeholder-slate-600 outline-none focus:border-fuchsia-500/60 focus:ring-1 focus:ring-fuchsia-500/30"
                 />
               </div>
 

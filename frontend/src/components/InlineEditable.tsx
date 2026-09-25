@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Pencil, Check } from 'lucide-react';
+import { Pencil, Check, X } from 'lucide-react';
 
 interface InlineEditableProps {
   value: string;
@@ -75,28 +75,34 @@ export default function InlineEditable({
 
   if (isEditing) {
     return (
-      <div className="inline-flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150">
+      <div className="inline-flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150 py-0.5 max-w-full">
         <input
           ref={inputRef}
           type="text"
           value={draftVal}
           placeholder={placeholder}
           onChange={(e) => setDraftVal(e.target.value)}
-          onBlur={handleCommit}
           onKeyDown={handleKeyDown}
-          className={`px-2.5 py-1 text-sm bg-slate-900/90 text-cyan-200 border border-cyan-400/80 rounded-lg outline-none ring-2 ring-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.35)] transition-all duration-150 ${className}`}
-          style={{ width: `${Math.max(draftVal.length + 3, 10)}ch` }}
+          className={`px-2.5 py-1.5 text-base sm:text-sm bg-slate-900 text-cyan-200 border border-cyan-400 rounded-lg outline-none ring-2 ring-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.35)] transition-all ${className}`}
+          style={{ width: `${Math.min(Math.max(draftVal.length + 3, 10), 30)}ch`, maxWidth: '100%' }}
         />
         <button
           type="button"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            handleCommit();
-          }}
-          className="p-1 rounded-md bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors"
-          title="Guardar (Enter)"
+          onClick={handleCommit}
+          className="btn-press min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-lg bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition-colors shadow-sm"
+          title="Guardar cambios"
+          aria-label="Guardar"
         >
-          <Check className="w-3.5 h-3.5" />
+          <Check className="w-4 h-4 stroke-[2.5]" />
+        </button>
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="btn-press min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+          title="Cancelar edición"
+          aria-label="Cancelar"
+        >
+          <X className="w-4 h-4" />
         </button>
       </div>
     );
@@ -110,7 +116,7 @@ export default function InlineEditable({
           ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/50'
           : 'hover:bg-cyan-500/10 hover:text-cyan-300'
       } ${className} ${isTitle ? 'font-bold' : ''}`}
-      title="Doble clic o pulsa el lápiz para editar"
+      title="Toca el lápiz o haz doble clic para editar"
     >
       <span className="truncate">{draftVal || <span className="italic text-slate-500">{placeholder}</span>}</span>
       
@@ -123,11 +129,11 @@ export default function InlineEditable({
             e.stopPropagation();
             setIsEditing(true);
           }}
-          className="opacity-0 group-hover/edit:opacity-100 p-0.5 rounded text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-opacity duration-150 shrink-0"
-          title="Editar"
+          className="min-w-[32px] min-h-[32px] sm:min-w-[24px] sm:min-h-[24px] flex items-center justify-center p-1 rounded-md text-slate-400 hover:text-cyan-300 active:bg-cyan-500/20 opacity-80 sm:opacity-0 sm:group-hover/edit:opacity-100 transition-opacity duration-150 shrink-0 touch-manipulation"
+          title="Editar este elemento"
           aria-label="Editar"
         >
-          <Pencil className="w-3 h-3" />
+          <Pencil className="w-3.5 h-3.5" />
         </button>
       )}
     </span>
