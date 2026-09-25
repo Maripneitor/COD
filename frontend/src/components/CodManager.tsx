@@ -26,7 +26,9 @@ import SkeletonLoader from './SkeletonLoader';
 import QuickCopyButton from './QuickCopyButton';
 import InlineEditable from './InlineEditable';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? `http://${window.location.hostname}:3000/api`
+  : 'http://localhost:3000/api';
 
 const CATEGORY_CHIPS = [
   'Todos',

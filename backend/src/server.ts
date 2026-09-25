@@ -321,9 +321,9 @@ getRepository().then(repositoryInstance => {
     }
   });
 
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Servidor COD-Classes corriendo en http://localhost:${PORT}`);
+  const PORT = Number(process.env.PORT) || 3000;
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor COD-Classes corriendo en http://localhost:${PORT} y en la red local`);
   });
 }).catch(err => {
     console.error("Failed to start server", err);
