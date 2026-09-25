@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo Jerárquico PostgreSQL</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            slatebg: '#F8FAFC',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900 pb-12">
+
+  <!-- Top Header Bar -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shadow-indigo-200">
+          <i data-lucide="database" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h1 class="text-xs font-semibold uppercase tracking-wider text-slate-400">PostgreSQL Studio</h1>
+          <p class="text-sm font-bold text-slate-800 leading-tight">Catálogo Jerárquico</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <button id="schemaInfoBtn" class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors" title="Información de base de datos">
+          <i data-lucide="server" class="w-4 h-4"></i>
+        </button>
+        <button id="openClassDrawerBtn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors border border-slate-200/80">
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-600"></i>
+          <span id="activeClassLabelBadge">Lácteos</span>
+          <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Nivel 1: Barra Superior de Modos (4 Modos principales) -->
+    <div class="px-4 pb-2">
+      <div class="flex items-center justify-between gap-1 p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 text-xs">
+        <button onclick="selectMode('MJ')" id="mode-MJ" class="mode-tab flex-1 py-1.5 px-2 text-center font-semibold rounded-lg transition-all shadow-sm bg-white text-indigo-600">
+          MJ
+        </button>
+        <button onclick="selectMode('Modo 2')" id="mode-Modo-2" class="mode-tab flex-1 py-1.5 px-2 text-center font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900">
+          Modo 2
+        </button>
+        <button onclick="selectMode('Modo 3')" id="mode-Modo-3" class="mode-tab flex-1 py-1.5 px-2 text-center font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900">
+          Modo 3
+        </button>
+        <button onclick="selectMode('Modo 4')" id="mode-Modo-4" class="mode-tab flex-1 py-1.5 px-2 text-center font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900">
+          Modo 4
+        </button>
+      </div>
+    </div>
+
+    <!-- Nivel 2: Selector de Submodos (hasta 6) con chip Default -->
+    <div class="px-4 py-2 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      <div id="submodesContainer" class="flex items-center gap-1.5 min-w-max">
+        <!-- Submodos rendered dynamically -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Breadcrumb dinámico e info contextual -->
+  <section class="px-4 py-2.5 bg-slate-100/50 border-b border-slate-200/70 text-xs">
+    <div class="flex items-center gap-1 text-slate-500 overflow-x-auto whitespace-nowrap py-0.5">
+      <span class="font-medium text-slate-700" id="bc-mode">MJ</span>
+      <i data-lucide="chevron-right" class="w-3 h-3 text-slate-400 shrink-0"></i>
+      <span class="font-medium text-slate-700" id="bc-submode">Submodo Alpha</span>
+      <i data-lucide="chevron-right" class="w-3 h-3 text-slate-400 shrink-0"></i>
+      <span class="font-medium text-indigo-600" id="bc-class">Lácteos</span>
+    </div>
+  </section>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 px-4 py-4 max-w-2xl mx-auto w-full">
+    <!-- Header del Nivel 4 (Clase activa & Slots) -->
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-base font-bold text-slate-900" id="currentClassTitle">Lácteos</h2>
+          <span class="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100" id="slotOccupancyBadge">
+            4 / 7 asignados
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">Distribución de casilleros (Slots del 1 al 7)</p>
+      </div>
+
+      <button onclick="openClassDrawer()" class="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 shadow-sm flex items-center gap-1.5 text-xs font-medium">
+        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+        <span>Cambiar Clase</span>
+      </button>
+    </div>
+
+    <!-- Grilla de Slots 1 al 7 (Nivel 4 y Nivel 5) -->
+    <div id="slotsGrid" class="space-y-3">
+      <!-- Los slots del 1 al 7 se renderizan aquí dinámicamente -->
+    </div>
+  </main>
+
+  <!-- Drawer / Modal Lateral de Clases (Nivel 3) -->
+  <div id="classDrawerBackdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden transition-opacity">
+    <div class="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-200">
+      
+      <!-- Drawer Header -->
+      <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+        <div class="flex items-center gap-2">
+          <i data-lucide="layers" class="w-4 h-4 text-indigo-600"></i>
+          <h3 class="font-bold text-slate-900 text-sm">Clases y Categorías</h3>
+        </div>
+        <button onclick="closeClassDrawer()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Quick Search input -->
+      <div class="p-3 border-b border-slate-100 bg-white">
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input 
+            type="text" 
+            id="classSearchInput" 
+            oninput="filterClasses(this.value)"
+            placeholder="Filtrar clases..." 
+            class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-slate-400">
+        </div>
+      </div>
+
+      <!-- Classes List -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="classesListContainer">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="p-3 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500 flex items-center justify-between">
+        <span>Tabla: <code class="font-mono text-indigo-600">catalogo.clases</code></span>
+        <span id="classesCountInfo">4 clases</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Agregar / Asignar Objeto o Código (Validación Regex) -->
+  <div id="codeModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-slate-200 overflow-hidden transform transition-all">
+      
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+            <span id="modalSlotNumber">1</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm" id="modalTitle">Gestionar Objeto</h3>
+            <p class="text-[11px] text-slate-500" id="modalSubtitle">Slot #1 en Lácteos</p>
+          </div>
+        </div>
+        <button onclick="closeCodeModal()" class="p-1 text-slate-400 hover:text-slate-700 rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="slotForm" onsubmit="handleSaveSlot(event)" class="p-5 space-y-4">
+        <!-- Nombre del objeto -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre del Objeto</label>
+          <input 
+            type="text" 
+            id="modalObjectName" 
+            required 
+            placeholder="ej. Leche Entera 1L" 
+            class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium">
+        </div>
+
+        <!-- Código Alfanumérico con Regex -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-semibold text-slate-700">Código de Referencia</label>
+            <span class="text-[10px] font-mono text-slate-400">TEXTO-10ALFANUM</span>
+          </div>
+          <div class="relative">
+            <input 
+              type="text" 
+              id="modalCodeInput" 
+              required 
+              oninput="validateCodeRegex(this.value)"
+              placeholder="ej. PROD-A9K3L7B0X1" 
+              class="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 uppercase transition-all">
+            <span id="regexValidationIcon" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs"></span>
+          </div>
+          <p id="regexFeedback" class="text-[11px] mt-1 text-slate-400">
+            Formato: <code class="font-mono text-slate-600">^[A-Za-z]+-[A-Za-z0-9]{10}$</code>
+          </p>
+        </div>
+
+        <!-- Códigos existentes listados -->
+        <div id="modalExistingCodesContainer" class="pt-2 border-t border-slate-100">
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">Códigos asignados actualmente</label>
+          <div id="modalCodesChips" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+            <!-- Chips -->
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+          <button 
+            type="button" 
+            id="deleteSlotBtn"
+            onclick="handleDeleteCurrentSlot()" 
+            class="px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors hidden">
+            Vaciar Slot
+          </button>
+          <div class="flex items-center gap-2 ml-auto">
+            <button 
+              type="button" 
+              onclick="closeCodeModal()" 
+              class="px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              id="saveSlotSubmitBtn"
+              class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 rounded-xl shadow-sm shadow-indigo-200 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              Guardar Slot
+            </button>
+          </div>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Modal de Esquema PostgreSQL / Info -->
+  <div id="schemaModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <i data-lucide="database" class="w-4 h-4 text-indigo-600"></i>
+          <h3 class="font-bold text-slate-900 text-sm">Esquema Relacional PostgreSQL</h3>
+        </div>
+        <button onclick="closeSchemaModal()" class="p-1 text-slate-400 hover:text-slate-700 rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="p-4 text-xs space-y-3 font-mono text-slate-600 bg-slate-900 text-slate-200 overflow-x-auto rounded-b-2xl">
+        <div class="text-indigo-400">// Estructura 5 niveles en PostgreSQL:</div>
+        <div><span class="text-amber-400">1. modos</span> (id, nombre [MJ, Modo 2...])</div>
+        <div><span class="text-amber-400">2. submodos</span> (id, modo_id, nombre, is_default)</div>
+        <div><span class="text-amber-400">3. clases</span> (id, submodo_id, nombre, icono)</div>
+        <div><span class="text-amber-400">4. objetos</span> (id, clase_id, slot [1..7], nombre)</div>
+        <div><span class="text-amber-400">5. codigos</span> (id, objeto_id, codigo_val [REGEX])</div>
+        <div class="pt-2 text-slate-400 text-[11px] border-t border-slate-700">
+          CONSTRAINT chk_slot CHECK (slot BETWEEN 1 AND 7)<br>
+          CONSTRAINT chk_codigo CHECK (codigo_val ~ '^[A-Za-z]+-[A-Za-z0-9]{10}$')
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-full shadow-lg text-xs font-medium flex items-center gap-2 transition-all opacity-0 pointer-events-none translate-y-2">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toastMessage">Operación exitosa</span>
+  </div>
+
+  <!-- Script principal de lógica de datos y componentes -->
+  <script>
+    // --- ESTADO Y MOCK DATA (PostgreSQL schema simulated) ---
+    const MODES = [
+      { id: 'MJ', label: 'MJ', active: true },
+      { id: 'Modo 2', label: 'Modo 2', active: false },
+      { id: 'Modo 3', label: 'Modo 3', active: false },
+      { id: 'Modo 4', label: 'Modo 4', active: false }
+    ];
+
+    const SUBMODES = {
+      'MJ': [
+        { id: 'sm-mj-1', name: 'Alpha Predeterminado', isDefault: true },
+        { id: 'sm-mj-2', name: 'Beta Rápido', isDefault: false },
+        { id: 'sm-mj-3', name: 'Gamma Auditoría', isDefault: false },
+        { id: 'sm-mj-4', name: 'Delta Backup', isDefault: false },
+        { id: 'sm-mj-5', name: 'Epsilon Lote', isDefault: false },
+        { id: 'sm-mj-6', name: 'Zeta Testing', isDefault: false },
+      ],
+      'Modo 2': [
+        { id: 'sm-m2-1', name: 'Estándar', isDefault: true },
+        { id: 'sm-m2-2', name: 'Supervisión', isDefault: false },
+        { id: 'sm-m2-3', name: 'Logística', isDefault: false },
+        { id: 'sm-m2-4', name: 'Empaque', isDefault: false }
+      ],
+      'Modo 3': [
+        { id: 'sm-m3-1', name: 'Principal', isDefault: true },
+        { id: 'sm-m3-2', name: 'Secundario', isDefault: false },
+        { id: 'sm-m3-3', name: 'Control Calidad', isDefault: false }
+      ],
+      'Modo 4': [
+        { id: 'sm-m4-1', name: 'Default Producción', isDefault: true },
+        { id: 'sm-m4-2', name: 'Mantenimiento', isDefault: false }
+      ]
+    };
+
+    // Clases por cada submodo
+    const CLASSES = {
+      'sm-mj-1': [
+        { id: 'c-lacteos', name: 'Lácteos', icon: 'milk', count: 4 },
+        { id: 'c-carnes', name: 'Carnes', icon: 'beef', count: 3 },
+        { id: 'c-abarrotes', name: 'Abarrotes', icon: 'shopping-bag', count: 5 },
+        { id: 'c-bebidas', name: 'Bebidas', icon: 'coffee', count: 2 },
+        { id: 'c-panaderia', name: 'Panadería', icon: 'croissant', count: 1 }
+      ],
+      'sm-mj-2': [
+        { id: 'c-congelados', name: 'Congelados', icon: 'snowflake', count: 2 },
+        { id: 'c-limpieza', name: 'Limpieza', icon: 'sparkles', count: 4 }
+      ]
+    };
+
+    // Objetos con asignación a Slots (1 al 7) y sus códigos
+    // Formato de código requerido: ^[A-Za-z]+-[A-Za-z0-9]{10}$
+    const SLOTS_DATA = {
+      'c-lacteos': {
+        1: {
+          id: 'obj-1',
+          name: 'Leche Deslactosada 1L',
+          codes: ['LECHE-A9K3L7B0X1', 'LACT-8923KJHG52']
+        },
+        2: {
+          id: 'obj-2',
+          name: 'Queso Gouda Artesanal 500g',
+          codes: ['QUESO-BNM897210P']
+        },
+        4: {
+          id: 'obj-4',
+          name: 'Yogurt Griego Natural',
+          codes: ['YOG-PL098234KL', 'BIO-9872134590']
+        },
+        5: {
+          id: 'obj-5',
+          name: 'Mantequilla con Sal 250g',
+          codes: ['MANT-ZZ998811AA']
+        }
+      },
+      'c-carnes': {
+        1: {
+          id: 'obj-c1',
+          name: 'Corte Ribeye Premium',
+          codes: ['CARNE-RBE0019283']
+        },
+        3: {
+          id: 'obj-c3',
+          name: 'Pechuga de Pollo Orgánica',
+          codes: ['AVIC-9988776655']
+        },
+        7: {
+          id: 'obj-c7',
+          name: 'Lomo Fino de Res',
+          codes: ['RES-1234567890']
+        }
+      },
+      'c-abarrotes': {
+        1: { id: 'obj-a1', name: 'Arroz Extra Grano Largo', codes: ['ARROZ-0987654321'] },
+        2: { id: 'obj-a2', name: 'Aceite de Oliva Extra Virgen', codes: ['OLIVA-AABBCCDDEE'] },
+        3: { id: 'obj-a3', name: 'Frijol Negro Seleccionado', codes: ['GRA-1122334455'] },
+        6: { id: 'obj-a6', name: 'Café de Especialidad 500g', codes: ['CAFE-MOKA998877'] },
+        7: { id: 'obj-a7', name: 'Azúcar Morena de Caña', codes: ['AZUC-5544332211'] }
+      },
+      'c-bebidas': {
+        2: { id: 'obj-b2', name: 'Agua Mineral de Manantial', codes: ['AGUA-H2O0987612'] },
+        5: { id: 'obj-b5', name: 'Jugo de Naranja 100% Puro', codes: ['JUGO-CITR887766'] }
+      },
+      'c-panaderia': {
+        1: { id: 'obj-p1', name: 'Pan de Masa Madre', codes: ['PAN-SOURDOUGH1'] }
+      }
+    };
+
+    // Estado actual de navegación
+    let currentModeId = 'MJ';
+    let currentSubmodeId = 'sm-mj-1';
+    let currentClassId = 'c-lacteos';
+    let activeEditingSlot = null;
+
+    // Inicialización al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSubmodes();
+      renderClassesList();
+      renderSlotsView();
+      updateBreadcrumbs();
+      lucide.createIcons();
+
+      // Listeners modales
+      document.getElementById('schemaInfoBtn').addEventListener('click', openSchemaModal);
+      document.getElementById('openClassDrawerBtn').addEventListener('click', openClassDrawer);
+    });
+
+    // --- ACCIONES DE NAVEGACIÓN ---
+
+    function selectMode(modeId) {
+      currentModeId = modeId;
+      
+      // Actualizar estilo de tabs
+      document.querySelectorAll('.mode-tab').forEach(tab => {
+        tab.className = 'mode-tab flex-1 py-1.5 px-2 text-center font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900';
+      });
+      const activeTab = document.getElementById(`mode-${modeId.replace(/\s+/g, '-')}`);
+      if (activeTab) {
+        activeTab.className = 'mode-tab flex-1 py-1.5 px-2 text-center font-semibold rounded-lg transition-all shadow-sm bg-white text-indigo-600';
+      }
+
+      // Tomar primer submodo del modo seleccionado
+      const submodes = SUBMODES[modeId] || [];
+      if (submodes.length > 0) {
+        currentSubmodeId = submodes[0].id;
+      }
+      
+      // Asegurar clase válida
+      const classesForSub = getClassesForCurrentSubmode();
+      if (classesForSub.length > 0) {
+        currentClassId = classesForSub[0].id;
+      }
+
+      renderSubmodes();
+      renderClassesList();
+      renderSlotsView();
+      updateBreadcrumbs();
+      showToast(`Modo cambiado a ${modeId}`);
+    }
+
+    function selectSubmode(submodeId) {
+      currentSubmodeId = submodeId;
+      renderSubmodes();
+      
+      const classes = getClassesForCurrentSubmode();
+      if (classes.length > 0 && !classes.some(c => c.id === currentClassId)) {
+        currentClassId = classes[0].id;
+      }
+      
+      renderClassesList();
+      renderSlotsView();
+      updateBreadcrumbs();
+    }
+
+    function selectClass(classId) {
+      currentClassId = classId;
+      closeClassDrawer();
+      renderClassesList();
+      renderSlotsView();
+      updateBreadcrumbs();
+    }
+
+    function getClassesForCurrentSubmode() {
+      if (CLASSES[currentSubmodeId]) {
+        return CLASSES[currentSubmodeId];
+      }
+      // Fallback con categorías por defecto si el submodo no tiene data específica
+      return [
+        { id: 'c-gen-1', name: 'General', icon: 'box', count: 1 },
+        { id: 'c-gen-2', name: 'Clase Secundaria', icon: 'tag', count: 0 }
+      ];
+    }
+
+    // --- RENDERIZADO DE COMPONENTES ---
+
+    function renderSubmodes() {
+      const container = document.getElementById('submodesContainer');
+      const submodes = SUBMODES[currentModeId] || [];
+      
+      container.innerHTML = submodes.map(sm => {
+        const isActive = sm.id === currentSubmodeId;
+        const baseClass = "px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ";
+        const activeClass = isActive 
+          ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200" 
+          : "bg-slate-100/90 text-slate-600 hover:bg-slate-200 border border-slate-200/60";
+
+        return `
+          <button onclick="selectSubmode('${sm.id}')" class="${baseClass} ${activeClass}">
+            <span>${sm.name}</span>
+            ${sm.isDefault ? `
+              <span class="text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase ${isActive ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-200 text-slate-600'}">
+                Default
+              </span>
+            ` : ''}
+          </button>
+        `;
+      }).join('');
+      
+      lucide.createIcons();
+    }
+
+    function renderClassesList(filterText = '') {
+      const container = document.getElementById('classesListContainer');
+      const classes = getClassesForCurrentSubmode();
+      const filtered = classes.filter(c => c.name.toLowerCase().includes(filterText.toLowerCase()));
+
+      document.getElementById('classesCountInfo').textContent = `${filtered.length} clases`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="p-6 text-center text-slate-400 text-xs">
+            <i data-lucide="search-x" class="w-6 h-6 mx-auto mb-2 opacity-50"></i>
+            No se encontraron clases
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = filtered.map(c => {
+        const isSelected = c.id === currentClassId;
+        // Calcular conteo real de slots ocupados
+        const currentData = SLOTS_DATA[c.id] || {};
+        const count = Object.keys(currentData).length;
+
+        return `
+          <button 
+            onclick="selectClass('${c.id}')" 
+            class="w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between transition-all ${isSelected ? 'bg-indigo-50/80 border border-indigo-200 text-indigo-900 font-semibold' : 'hover:bg-slate-100 text-slate-700'}">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-200/60 text-slate-600'}">
+                <i data-lucide="${c.icon || 'layers'}" class="w-3.5 h-3.5"></i>
+              </div>
+              <span class="text-xs">${c.name}</span>
+            </div>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded-full ${isSelected ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200/70 text-slate-600'}">
+              ${count}/7
+            </span>
+          </button>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function filterClasses(text) {
+      renderClassesList(text);
+    }
+
+    function renderSlotsView() {
+      const currentClass = getClassesForCurrentSubmode().find(c => c.id === currentClassId) || { name: 'Clase', id: currentClassId };
+      document.getElementById('currentClassTitle').textContent = currentClass.name;
+      document.getElementById('activeClassLabelBadge').textContent = currentClass.name;
+
+      const slotsMap = SLOTS_DATA[currentClassId] || {};
+      const occupiedCount = Object.keys(slotsMap).length;
+      document.getElementById('slotOccupancyBadge').textContent = `${occupiedCount} / 7 asignados`;
+
+      const gridContainer = document.getElementById('slotsGrid');
+      let html = '';
+
+      // Generar casilleros del 1 al 7
+      for (let slot = 1; slot <= 7; slot++) {
+        const item = slotsMap[slot];
+
+        if (item) {
+          // Slot ocupado
+          html += `
+            <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all flex flex-col gap-2.5">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
+                    ${slot}
+                  </div>
+                  <div>
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Posición ${slot}</span>
+                    <h3 class="text-xs font-bold text-slate-800 leading-tight">${item.name}</h3>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1">
+                  <button onclick="openEditModal(${slot})" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors" title="Editar slot">
+                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Lista de Códigos Asignados (Formato regex monoespaciado) -->
+              <div class="pt-2 border-t border-slate-100">
+                <div class="text-[10px] text-slate-400 font-medium mb-1.5 flex items-center justify-between">
+                  <span>Códigos asignados (${item.codes ? item.codes.length : 0})</span>
+                  <span class="text-[9px] text-indigo-500 font-mono">TEXTO-10ALFANUM</span>
+                </div>
+                
+                <div class="flex flex-wrap gap-1.5">
+                  ${(item.codes || []).map(code => `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 text-[11px] font-mono text-slate-700 hover:text-indigo-700 transition-colors">
+                      <i data-lucide="hash" class="w-2.5 h-2.5 text-slate-400"></i>
+                      <span>${code}</span>
+                    </span>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          // Slot vacío (borde punteado interactivo)
+          html += `
+            <button 
+              onclick="openAddModal(${slot})" 
+              class="w-full text-left p-3.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/40 bg-white/60 transition-all flex items-center justify-between group">
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-slate-100 group-hover:bg-indigo-100 text-slate-400 group-hover:text-indigo-600 font-medium text-xs flex items-center justify-center shrink-0 transition-colors">
+                  ${slot}
+                </div>
+                <div class="text-xs">
+                  <span class="font-medium text-slate-600 group-hover:text-indigo-700 transition-colors">
+                    + Asignar objeto al slot ${slot}
+                  </span>
+                  <p class="text-[10px] text-slate-400">Casillero disponible para nuevo registro</p>
+                </div>
+              </div>
+              <i data-lucide="plus-circle" class="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-colors"></i>
+            </button>
+          `;
+        }
+      }
+
+      gridContainer.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    function updateBreadcrumbs() {
+      const modeObj = MODES.find(m => m.id === currentModeId) || { label: currentModeId };
+      const submodes = SUBMODES[currentModeId] || [];
+      const submodeObj = submodes.find(s => s.id === currentSubmodeId) || { name: 'Submodo' };
+      const classes = getClassesForCurrentSubmode();
+      const classObj = classes.find(c => c.id === currentClassId) || { name: 'Clase' };
+
+      document.getElementById('bc-mode').textContent = modeObj.label;
+      document.getElementById('bc-submode').textContent = submodeObj.name;
+      document.getElementById('bc-class').textContent = classObj.name;
+    }
+
+    // --- MODAL Y VALIDACIÓN REGEX ---
+
+    // Regex oficial: ^[A-Za-z]+-[A-Za-z0-9]{10}$
+    const CODE_REGEX = /^[A-Za-z]+-[A-Za-z0-9]{10}$/;
+
+    function validateCodeRegex(value) {
+      const iconSpan = document.getElementById('regexValidationIcon');
+      const feedback = document.getElementById('regexFeedback');
+      const saveBtn = document.getElementById('saveSlotSubmitBtn');
+      const cleanVal = value.trim();
+
+      if (!cleanVal) {
+        iconSpan.innerHTML = '';
+        feedback.innerHTML = `Formato: <code class="font-mono text-slate-600">^[A-Za-z]+-[A-Za-z0-9]{10}$</code>`;
+        feedback.className = 'text-[11px] mt-1 text-slate-400';
+        saveBtn.disabled = false;
+        return;
+      }
+
+      if (CODE_REGEX.test(cleanVal)) {
+        iconSpan.innerHTML = `<span class="text-emerald-600 font-bold">✓</span>`;
+        feedback.innerHTML = `<span class="text-emerald-600 font-medium">Formato válido de PostgreSQL</span>`;
+        feedback.className = 'text-[11px] mt-1 text-emerald-600';
+        saveBtn.disabled = false;
+      } else {
+        iconSpan.innerHTML = `<span class="text-rose-500 font-bold">✕</span>`;
+        feedback.innerHTML = `<span class="text-rose-500 font-medium">Debe tener letras, un guión y 10 alfanuméricos (ej: PROD-A9K3L7B0X1)</span>`;
+        feedback.className = 'text-[11px] mt-1 text-rose-500';
+        saveBtn.disabled = true;
+      }
+    }
+
+    function openAddModal(slot) {
+      activeEditingSlot = slot;
+      document.getElementById('modalSlotNumber').textContent = slot;
+      document.getElementById('modalTitle').textContent = `Asignar a Slot #${slot}`;
+      
+      const currentClass = getClassesForCurrentSubmode().find(c => c.id === currentClassId) || { name: 'Clase' };
+      document.getElementById('modalSubtitle').textContent = `Nuevo objeto en ${currentClass.name}`;
+      
+      document.getElementById('modalObjectName').value = '';
+      document.getElementById('modalCodeInput').value = '';
+      document.getElementById('modalExistingCodesContainer').classList.add('hidden');
+      document.getElementById('deleteSlotBtn').classList.add('hidden');
+      
+      validateCodeRegex('');
+      document.getElementById('codeModal').classList.remove('hidden');
+      document.getElementById('codeModal').classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function openEditModal(slot) {
+      activeEditingSlot = slot;
+      const slotsMap = SLOTS_DATA[currentClassId] || {};
+      const item = slotsMap[slot];
+      if (!item) return;
+
+      document.getElementById('modalSlotNumber').textContent = slot;
+      document.getElementById('modalTitle').textContent = `Editar Slot #${slot}`;
+      
+      const currentClass = getClassesForCurrentSubmode().find(c => c.id === currentClassId) || { name: 'Clase' };
+      document.getElementById('modalSubtitle').textContent = `${currentClass.name}`;
+      
+      document.getElementById('modalObjectName').value = item.name;
+      document.getElementById('modalCodeInput').value = '';
+      
+      // Mostrar chips de códigos existentes
+      const chipsContainer = document.getElementById('modalCodesChips');
+      chipsContainer.innerHTML = (item.codes || []).map((code, idx) => `
+        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-[11px] font-mono border border-slate-200">
+          <span>${code}</span>
+          <button type="button" onclick="removeCodeFromItem(${slot}, ${idx})" class="text-slate-400 hover:text-rose-600 font-bold">×</button>
+        </span>
+      `).join('');
+      
+      document.getElementById('modalExistingCodesContainer').classList.remove('hidden');
+      document.getElementById('deleteSlotBtn').classList.remove('hidden');
+      
+      validateCodeRegex('');
+      document.getElementById('codeModal').classList.remove('hidden');
+      document.getElementById('codeModal').classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeCodeModal() {
+      document.getElementById('codeModal').classList.add('hidden');
+      document.getElementById('codeModal').classList.remove('flex');
+    }
+
+    function handleSaveSlot(e) {
+      e.preventDefault();
+      const name = document.getElementById('modalObjectName').value.trim();
+      const codeVal = document.getElementById('modalCodeInput').value.trim().toUpperCase();
+
+      if (!SLOTS_DATA[currentClassId]) {
+        SLOTS_DATA[currentClassId] = {};
+      }
+
+      const existing = SLOTS_DATA[currentClassId][activeEditingSlot];
+
+      if (existing) {
+        existing.name = name;
+        if (codeVal && CODE_REGEX.test(codeVal)) {
+          if (!existing.codes.includes(codeVal)) {
+            existing.codes.push(codeVal);
+          }
+        }
+      } else {
+        const codesList = [];
+        if (codeVal && CODE_REGEX.test(codeVal)) {
+          codesList.push(codeVal);
+        } else if (!codeVal) {
+          // Asignar código autogenerado válido por conveniencia
+          codesList.push(`AUTO-${Math.random().toString(36).substring(2, 12).toUpperCase()}`);
+        }
+        SLOTS_DATA[currentClassId][activeEditingSlot] = {
+          id: `obj-${Date.now()}`,
+          name: name,
+          codes: codesList
+        };
+      }
+
+      closeCodeModal();
+      renderSlotsView();
+      renderClassesList();
+      showToast(`Slot #${activeEditingSlot} guardado exitosamente`);
+    }
+
+    function removeCodeFromItem(slot, codeIdx) {
+      if (SLOTS_DATA[currentClassId] && SLOTS_DATA[currentClassId][slot]) {
+        SLOTS_DATA[currentClassId][slot].codes.splice(codeIdx, 1);
+        openEditModal(slot);
+        renderSlotsView();
+      }
+    }
+
+    function handleDeleteCurrentSlot() {
+      if (confirm(`¿Deseas desasignar el Slot #${activeEditingSlot}?`)) {
+        if (SLOTS_DATA[currentClassId]) {
+          delete SLOTS_DATA[currentClassId][activeEditingSlot];
+        }
+        closeCodeModal();
+        renderSlotsView();
+        renderClassesList();
+        showToast(`Slot #${activeEditingSlot} vaciado`);
+      }
+    }
+
+    // --- DRAWER DE CLASES ---
+
+    function openClassDrawer() {
+      const drawer = document.getElementById('classDrawerBackdrop');
+      drawer.classList.remove('hidden');
+      document.getElementById('classSearchInput').value = '';
+      renderClassesList();
+    }
+
+    function closeClassDrawer() {
+      document.getElementById('classDrawerBackdrop').classList.add('hidden');
+    }
+
+    // --- MODAL DE ESQUEMA ---
+
+    function openSchemaModal() {
+      document.getElementById('schemaModal').classList.remove('hidden');
+      document.getElementById('schemaModal').classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeSchemaModal() {
+      document.getElementById('schemaModal').classList.add('hidden');
+      document.getElementById('schemaModal').classList.remove('flex');
+    }
+
+    // --- TOAST NOTIFICATION ---
+
+    function showToast(message) {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastMessage').textContent = message;
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
