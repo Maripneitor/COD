@@ -286,7 +286,8 @@ getRepository().then(repositoryInstance => {
           codigoArmero: finalCodigoArmero,
           calificacion: finalCalificacion
         });
-        return res.status(201).json(result);
+        const statusCode = result.status === 'created' ? 201 : 200;
+        return res.status(statusCode).json(result);
       }
 
       res.status(501).json({ error: 'createLoadout no implementado para este repositorio' });

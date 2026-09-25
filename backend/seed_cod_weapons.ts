@@ -6,8 +6,26 @@ interface MJEntry {
   codigo: string;
 }
 
-const MJ_DATASET: MJEntry[] = [
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'S0-14-1C2D4A5H8B' },
+function normalizeWeaponName(name: string): string {
+  const clean = name.trim();
+  const upper = clean.toUpperCase().replace(/\s+/g, ' ');
+  if (upper === 'SO14' || upper === 'S014' || upper === 'S0-14' || upper === 'SO 14') return 'SO-14';
+  if (upper === 'TYPE63' || upper === 'TYPE-63' || upper === 'TYPE 63') return 'Type 63';
+  if (upper === 'TYPE19' || upper === 'TYPE-19' || upper === 'TYPE 19') return 'Type 19';
+  if (upper === 'FR 556' || upper === 'FR556' || upper === 'FR.556' || upper === 'FR .556') return 'FR .556';
+  if (upper === 'BAL27' || upper === 'BAL 27' || upper === 'BAL-27') return 'BAL-27';
+  if (upper === 'KRM262' || upper === 'KRM 262' || upper === 'KRM-262') return 'KRM-262';
+  if (upper === 'DLQ33' || upper === 'DL-Q33' || upper === 'DLQ 33' || upper === 'DL Q33') return 'DL Q33';
+  if (upper === 'LW3 TUNDRA' || upper === 'LW3TUNDRA' || upper === 'LW3-TUNDRA') return 'LW3-Tundra';
+  if (upper === 'FSS-HURRICANE' || upper === 'FSS HURRICANE') return 'FSS Hurricane';
+  if (upper === 'USS9' || upper === 'USS-9' || upper === 'USS 9') return 'USS 9';
+  if (upper === 'FFAR1' || upper === 'FFAR-1' || upper === 'FFAR 1') return 'FFAR 1';
+  if (upper === 'LACHMANN 556' || upper === 'LACHMANN-556') return 'Lachmann-556';
+  return clean;
+}
+
+const RAW_MJ_DATASET: MJEntry[] = [
+  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5H8B' },
   { clase: 'Subfusiles', arma: 'VMP', codigo: 'VMP-2D4E5H6B8A' },
   { clase: 'Fusiles de Precisión', arma: 'DL Q33', codigo: 'DL Q33-2A4A5H6A7A' },
   { clase: 'Fusiles de Precisión', arma: 'LW3-Tundra', codigo: 'LW3-Tundra-1A2A5A8A9E' },
@@ -24,7 +42,6 @@ const MJ_DATASET: MJEntry[] = [
   { clase: 'Fusiles de Asalto', arma: 'XM4', codigo: 'XM4-1A2G4E8F9E' },
   { clase: 'Fusiles de Asalto', arma: 'BAL-27', codigo: 'BAL-27-1D2C4A8A9A' },
   { clase: 'Subfusiles', arma: 'FSS Hurricane', codigo: 'FSS Hurricane-1C2B4C5B8B' },
-  { clase: 'Fusiles de Tirador', arma: 'Type 63', codigo: 'Type 63-1B2B4A8B9F' },
   { clase: 'Fusiles de Asalto', arma: 'FFAR 1', codigo: 'FFAR 1-1B2F7B8E9E' },
   { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
   { clase: 'Subfusiles', arma: 'USS 9', codigo: 'USS 9-1C2D4A6C8B' },
@@ -32,47 +49,40 @@ const MJ_DATASET: MJEntry[] = [
   { clase: 'Fusiles de Asalto', arma: 'Type 19', codigo: 'Type 19-2B4A7B8B9B' },
   { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1G2C3B4E6E' },
   { clase: 'Subfusiles', arma: 'CBR4', codigo: 'CBR4-1A2B4A5E9A' },
-  { clase: 'Subfusiles', arma: 'USS 9', codigo: 'USS 9-1C2D4A6C8B' },
-  { clase: 'Ametralladoras Ligeras', arma: 'Chopper', codigo: 'Chopper-1C2C5A6C7G' },
-  { clase: 'Subfusiles', arma: 'USS 9', codigo: 'USS 9-1C2D4A6C8B' },
   { clase: 'Fusiles de Asalto', arma: 'BAL-27', codigo: 'BAL-27-1I2C3P7R8A' },
   { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5D8B' },
   { clase: 'Subfusiles', arma: 'VMP', codigo: 'VMP-2D4C5H8A9C' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5D8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5D8B' },
   { clase: 'Fusiles de Asalto', arma: 'Lachmann-556', codigo: 'Lachmann-556-1B3B5B7A8B' },
   { clase: 'Fusiles de Precisión', arma: 'Koshka', codigo: 'Koshka-2A4A5G6A9C' },
-  { clase: 'Fusiles de Precisión', arma: 'LW3-Tundra', codigo: 'LW3-Tundra-1A2A5A8A9E' },
   { clase: 'Fusiles de Precisión', arma: 'Locus', codigo: 'Locus-1B2A4B8C9C' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5D8B' },
   { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4B6B8B' },
   { clase: 'Subfusiles', arma: 'LC10', codigo: 'LC10-1C2F4D6C8F' },
   { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1I2A4A5D9A' },
   { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4E6C7N' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D3E4A8B' },
   { clase: 'Fusiles de Precisión', arma: 'LW3-Tundra', codigo: 'LW3-Tundra-1C2B4D8A9E' },
-  { clase: 'Fusiles de Precisión', arma: 'Locus', codigo: 'Locus-1B2A4B8C9C' },
   { clase: 'Fusiles de Asalto', arma: 'XM4', codigo: 'XM4-1A2G4E7C8A' },
-  { clase: 'Fusiles de Precisión', arma: 'Locus', codigo: 'Locus-1B2A4B8C9C' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D3E4A8B' },
   { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A9A' },
   { clase: 'Fusiles de Asalto', arma: 'FR .556', codigo: 'FR .556-1C2C4A5A8A' },
   { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1D2A4A5H8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5D8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4B6B8B' },
-  { clase: 'Subfusiles', arma: 'LC10', codigo: 'LC10-1C2F4D6C8F' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1I2A4A5D9A' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4E6C7N' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
-  { clase: 'Fusiles de Tirador', arma: 'SO-14', codigo: 'SO-14-1C2D4A5A8B' },
 ];
+
+// Deduplicate the raw dataset strictly by weapon and normalized code
+const DEDUPED_MJ_DATASET: MJEntry[] = [];
+const seenEntries = new Set<string>();
+
+for (const item of RAW_MJ_DATASET) {
+  const normWeapon = normalizeWeaponName(item.arma);
+  const normCode = item.codigo.trim().toUpperCase();
+  const key = `${item.clase.trim()}|${normWeapon}|${normCode}`;
+  if (!seenEntries.has(key)) {
+    seenEntries.add(key);
+    DEDUPED_MJ_DATASET.push({
+      clase: item.clase.trim(),
+      arma: normWeapon,
+      codigo: normCode,
+    });
+  }
+}
 
 const WEAPONS_CATALOG: Record<string, string[]> = {
   'Fusiles de Asalto': ['XM4', 'BAL-27', 'FFAR 1', 'Type 19', 'Lachmann-556', 'FR .556', 'M4', 'AK-47', 'M13', 'Kilo 141'],
@@ -93,12 +103,13 @@ const CONSOLIDATED_SUBMODES = [
 async function seed() {
   const client = await pgPool.connect();
   try {
-    console.log('⚡ Iniciando consolidación de Submodos y Seeding en NexusCOD...');
+    console.log('⚡ Iniciando consolidación, deduplicación y seeding estricto en NexusCOD...');
     await client.query('BEGIN');
 
-    // 1. Asegurar constraints flexibles
+    // 1. Asegurar constraints flexibles y columna de calificación
     await client.query('ALTER TABLE codigos DROP CONSTRAINT IF EXISTS check_codigo_formato');
     await client.query('ALTER TABLE objetos DROP CONSTRAINT IF EXISTS check_posicion');
+    await client.query('ALTER TABLE objetos DROP CONSTRAINT IF EXISTS objetos_clase_posicion_key');
     await client.query('ALTER TABLE codigos ADD COLUMN IF NOT EXISTS calificacion SMALLINT DEFAULT 5 CHECK (calificacion BETWEEN 0 AND 5)');
 
     // 2. Modos Oficiales (MJ, BR, Zombies)
@@ -150,12 +161,11 @@ async function seed() {
       submodeMap[sm.nombre] = submodeId;
     }
 
-    const primarySubmodeId = submodeMap['Primera Línea / Duelo por Equipos'];
-
-    // 4. Migrar armas de submodos obsoletos hacia "Primera Línea / Duelo por Equipos" y eliminar submodos viejos
+    // 4. Eliminar submodos obsoletos
     const obsoleteSubmodesRes = await client.query(
-      `SELECT id, nombre FROM submodos WHERE id NOT IN ($1, $2, $3)`,
+      `SELECT id, nombre FROM submodos WHERE modo_id = $1 AND id NOT IN ($2, $3, $4)`,
       [
+        mjModeId,
         submodeMap['Primera Línea / Duelo por Equipos'],
         submodeMap['Punto Caliente y Dominio'],
         submodeMap['Buscar y Destruir / Control']
@@ -163,7 +173,6 @@ async function seed() {
     );
 
     for (const oldSm of obsoleteSubmodesRes.rows) {
-      // Eliminar submodo obsoleto (cascade eliminará clases huérfanas una vez reubicados los datos)
       await client.query('DELETE FROM submodos WHERE id = $1', [oldSm.id]);
     }
 
@@ -185,29 +194,51 @@ async function seed() {
           classId = insertCl.rows[0].id;
         }
 
-        // Sembrar armas
+        // Sembrar armas normalizadas
         for (let i = 0; i < weaponList.length; i++) {
-          const wName = weaponList[i];
+          const rawName = weaponList[i];
+          const wName = normalizeWeaponName(rawName);
           const pos = i + 1;
-          await client.query(
-            `INSERT INTO objetos (clase_id, posicion, nombre) 
-             VALUES ($1, $2, $3)
-             ON CONFLICT (clase_id, posicion) 
-             DO UPDATE SET nombre = EXCLUDED.nombre`,
-            [classId, pos, wName]
+          
+          // Buscar si el arma ya existe por nombre exacto o fuzzy
+          const objCheck = await client.query(
+            `SELECT id FROM objetos 
+             WHERE clase_id = $1 
+               AND (LOWER(nombre) = LOWER($2) OR LOWER(REPLACE(REPLACE(nombre, '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE($2, '-', ''), ' ', '')))
+             LIMIT 1`,
+            [classId, wName]
           );
+
+          if (objCheck.rows.length > 0) {
+            // Actualizar nombre al estándar normalizado
+            await client.query('UPDATE objetos SET nombre = $1 WHERE id = $2', [wName, objCheck.rows[0].id]);
+          } else {
+            const nextPos = await client.query('SELECT COALESCE(MAX(posicion), 0) + 1 AS np FROM objetos WHERE clase_id = $1', [classId]);
+            await client.query(
+              'INSERT INTO objetos (clase_id, posicion, nombre) VALUES ($1, $2, $3)',
+              [classId, nextPos.rows[0].np, wName]
+            );
+          }
         }
       }
     }
 
-    // 6. Insertar todo el dataset de Códigos de Armero en "Primera Línea / Duelo por Equipos" y en los otros 2 submodos
-    console.log(`📦 Insertando dataset de códigos en los 3 submodos consolidados...`);
+    // 6. Limpiar códigos duplicados previos en la base de datos (conservar solo el de mayor rating / id menor)
+    await client.query(`
+      DELETE FROM codigos a USING codigos b
+      WHERE a.id > b.id 
+        AND a.objeto_id = b.objeto_id 
+        AND UPPER(TRIM(a.codigo)) = UPPER(TRIM(b.codigo));
+    `);
+
+    // 7. Insertar el dataset deduplicado
+    console.log(`📦 Insertando dataset de códigos únicos (${DEDUPED_MJ_DATASET.length} registros) en los 3 submodos...`);
     let codesInserted = 0;
 
     for (const [submodeName, subId] of Object.entries(submodeMap)) {
-      for (const item of MJ_DATASET) {
+      for (const item of DEDUPED_MJ_DATASET) {
         const className = item.clase.trim();
-        const weaponName = item.arma.trim() === 'SO14' ? 'SO-14' : item.arma.trim();
+        const weaponName = normalizeWeaponName(item.arma);
         const codeValue = item.codigo.trim().toUpperCase();
 
         // Obtener clase
@@ -218,12 +249,16 @@ async function seed() {
         if (clRes.rows.length === 0) continue;
         const classId = clRes.rows[0].id;
 
-        // Obtener arma
+        // Obtener arma (búsqueda normalizada)
         let objetoId: number;
         const objRes = await client.query(
-          'SELECT id FROM objetos WHERE clase_id = $1 AND nombre = $2',
+          `SELECT id FROM objetos 
+           WHERE clase_id = $1 
+             AND (LOWER(nombre) = LOWER($2) OR LOWER(REPLACE(REPLACE(nombre, '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE($2, '-', ''), ' ', '')))
+           LIMIT 1`,
           [classId, weaponName]
         );
+
         if (objRes.rows.length > 0) {
           objetoId = objRes.rows[0].id;
         } else {
@@ -241,7 +276,7 @@ async function seed() {
 
         // Insertar código si no existe
         const codeCheck = await client.query(
-          'SELECT id FROM codigos WHERE objeto_id = $1 AND codigo = $2',
+          'SELECT id FROM codigos WHERE objeto_id = $1 AND UPPER(TRIM(codigo)) = UPPER(TRIM($2))',
           [objetoId, codeValue]
         );
 
@@ -255,13 +290,15 @@ async function seed() {
       }
     }
 
+    // 8. Crear índice único para prevenir duplicados a nivel de motor de base de datos
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_codigos_objeto_codigo_unique 
+      ON codigos (objeto_id, UPPER(TRIM(codigo)));
+    `);
+
     await client.query('COMMIT');
-    console.log(`✅ ¡Consolidación y Seeding completados exitosamente!`);
-    console.log(`🎮 Submodos oficiales activos:`);
-    console.log(`  1. Primera Línea / Duelo por Equipos`);
-    console.log(`  2. Punto Caliente y Dominio`);
-    console.log(`  3. Buscar y Destruir / Control`);
-    console.log(`🚀 ${codesInserted} códigos de armero insertados en los submodos.`);
+    console.log(`✅ ¡Consolidación, deduplicación y constraint UNIQUE completados!`);
+    console.log(`🚀 ${codesInserted} códigos insertados/asegurados sin duplicados.`);
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Error en el proceso:', error);

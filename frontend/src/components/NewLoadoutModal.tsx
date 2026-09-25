@@ -1,5 +1,5 @@
-import { useState, useId } from 'react';
-import { X, Star, Clipboard, Plus } from 'lucide-react';
+import { useState, useId, useMemo } from 'react';
+import { X, Star, Clipboard, Plus, AlertCircle } from 'lucide-react';
 import type { IModo } from '../types';
 
 interface NewLoadoutModalProps {
@@ -14,6 +14,8 @@ interface NewLoadoutModalProps {
     calificacion: number;
     codigoId?: number;
     objetoId?: number;
+    status?: 'code_exists' | 'weapon_exists_code_added' | 'created' | string;
+    message?: string;
   }) => void;
   modes: IModo[];
   activeModoId: number;
@@ -64,6 +66,24 @@ export default function NewLoadoutModal({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [pastedFeedback, setPastedFeedback] = useState<boolean>(false);
+
+  // Live duplicate code detection for the weapon
+  const isDuplicateCodeLive = useMemo(() => {
+    const cleanW = armaNombre.trim().toLowerCase().replace(/[-\s._]/g, '');
+    const cleanC = codigoArmero.trim().toUpperCase();
+    if (!cleanW || !cleanC) return false;
+
+    return modes.some(m =>
+      (m.submodos || []).some(s =>
+        (s.clases || []).some(c =>
+          (c.objetos || []).some(o => {
+            const matchWeapon = o.nombre.toLowerCase().replace(/[-\s._]/g, '') === cleanW;
+            return matchWeapon && (o.codigos || []).some(cd => cd.codigo.trim().toUpperCase() === cleanC);
+          })
+        )
+      )
+    );
+  }, [modes, armaNombre, codigoArmero]);
 
   // Extract known weapon suggestions from loaded modes for autocomplete
   const existingWeapons = Array.from(
@@ -139,6 +159,8 @@ export default function NewLoadoutModal({
 
       onSuccess({
         ...payload,
+        status: result.status,
+        message: result.message,
         codigoId: result.codigoId,
         objetoId: result.objetoId
       });
@@ -295,9 +317,19 @@ export default function NewLoadoutModal({
               value={codigoArmero}
               onChange={e => setCodigoArmero(e.target.value)}
               placeholder="Ej: XM4-1A2G4E8F9E"
-              className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2.5 text-sm font-mono tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all select-all font-bold"
+              className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-sm font-mono tracking-wider uppercase focus:outline-none focus:ring-2 focus:border-blue-600 transition-all select-all font-bold ${
+                isDuplicateCodeLive
+                  ? 'border-amber-400 bg-amber-50/40 text-slate-900 focus:ring-amber-500/20'
+                  : 'border-slate-200 text-slate-900 focus:ring-blue-500/20'
+              }`}
               required
             />
+            {isDuplicateCodeLive && (
+              <div className="mt-1.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium animate-fade-in">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Aviso: Este código ya está registrado para esta arma</span>
+              </div>
+            )}
           </div>
 
           {/* 6. Calificación Inicial (Estrellas) */}

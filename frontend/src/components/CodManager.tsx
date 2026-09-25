@@ -151,6 +151,8 @@ export default function CodManager() {
     calificacion: number;
     codigoId?: number;
     objetoId?: number;
+    status?: 'code_exists' | 'weapon_exists_code_added' | 'created' | string;
+    message?: string;
   }) => {
     // Optimistic UI state update
     setModes(prevModes => {
@@ -191,7 +193,8 @@ export default function CodManager() {
         }
 
         const objetos = [...(cl.objetos || [])];
-        let obj = objetos.find(o => o.nombre.toLowerCase() === newLoadout.armaNombre.toLowerCase());
+        const cleanTargetWeapon = newLoadout.armaNombre.trim().toLowerCase().replace(/[-\s._]/g, '');
+        let obj = objetos.find(o => o.nombre.toLowerCase().replace(/[-\s._]/g, '') === cleanTargetWeapon);
         if (!obj) {
           obj = {
             id: newLoadout.objetoId || Date.now() + 2,
@@ -202,17 +205,31 @@ export default function CodManager() {
           objetos.push(obj);
         }
 
-        const newCodeItem = {
-          id: newLoadout.codigoId || Date.now() + 3,
-          codigo: newLoadout.codigoArmero,
-          calificacion: newLoadout.calificacion
-        };
+        const normCode = newLoadout.codigoArmero.trim().toUpperCase();
+        let existingCodes = [...(obj.codigos || [])];
+        const codeIndex = existingCodes.findIndex(c => c.codigo.trim().toUpperCase() === normCode);
+
+        if (codeIndex >= 0) {
+          // Update rating on existing code
+          existingCodes[codeIndex] = {
+            ...existingCodes[codeIndex],
+            calificacion: newLoadout.calificacion
+          };
+        } else {
+          // Add new code item
+          existingCodes.push({
+            id: newLoadout.codigoId || Date.now() + 3,
+            codigo: normCode,
+            calificacion: newLoadout.calificacion
+          });
+        }
+
+        // Re-sort codes descending by rating
+        existingCodes.sort((a, b) => (b.calificacion ?? 0) - (a.calificacion ?? 0));
 
         const updatedObj = {
           ...obj,
-          codigos: [newCodeItem, ...(obj.codigos || [])].sort(
-            (a, b) => (b.calificacion ?? 0) - (a.calificacion ?? 0)
-          )
+          codigos: existingCodes
         };
 
         const updatedClases = clases.map(c => 
@@ -229,7 +246,15 @@ export default function CodManager() {
       return updated;
     });
 
-    showToast('Armero guardado con éxito', 'success');
+    // Intelligent Status Feedback Toasts
+    if (newLoadout.status === 'code_exists') {
+      showToast('⚠️ El código ya se encontraba registrado en esta arma', 'warning');
+    } else if (newLoadout.status === 'weapon_exists_code_added') {
+      showToast('ℹ️ Arma existente: el código de armero se guardó', 'info');
+    } else {
+      showToast('✓ Arma y armero registrados con éxito', 'success');
+    }
+
     loadData(); // Re-sync in background
   };
 

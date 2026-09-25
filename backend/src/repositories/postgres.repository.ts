@@ -454,51 +454,115 @@ export class PostgresCodRepository implements ICodRepository {
         clId = newCl.rows[0].id;
       }
 
-      // 4. Resolver objeto_id (Arma)
+      // 4. Resolver objeto_id (Arma con normalización y deduplicación)
       let objId: number;
-      const weaponClean = armaNombre.trim();
+      const cleanRaw = armaNombre.trim();
+      const upperClean = cleanRaw.toUpperCase().replace(/\s+/g, ' ');
+      let finalWeaponName = cleanRaw;
+      if (upperClean === 'SO14' || upperClean === 'S014' || upperClean === 'S0-14' || upperClean === 'SO 14') finalWeaponName = 'SO-14';
+      else if (upperClean === 'TYPE63' || upperClean === 'TYPE-63') finalWeaponName = 'Type 63';
+      else if (upperClean === 'TYPE19' || upperClean === 'TYPE-19') finalWeaponName = 'Type 19';
+      else if (upperClean === 'FR 556' || upperClean === 'FR556' || upperClean === 'FR.556') finalWeaponName = 'FR .556';
+      else if (upperClean === 'BAL27' || upperClean === 'BAL 27') finalWeaponName = 'BAL-27';
+      else if (upperClean === 'KRM262' || upperClean === 'KRM 262') finalWeaponName = 'KRM-262';
+      else if (upperClean === 'DLQ33' || upperClean === 'DL-Q33' || upperClean === 'DLQ 33') finalWeaponName = 'DL Q33';
+      else if (upperClean === 'LW3 TUNDRA' || upperClean === 'LW3TUNDRA') finalWeaponName = 'LW3-Tundra';
+      else if (upperClean === 'USS9' || upperClean === 'USS-9') finalWeaponName = 'USS 9';
+      else if (upperClean === 'FFAR1' || upperClean === 'FFAR-1') finalWeaponName = 'FFAR 1';
+
+      let isNewWeapon = false;
       const objRes = await client.query(
-        'SELECT id FROM objetos WHERE clase_id = $1 AND nombre ILIKE $2 ORDER BY id LIMIT 1',
-        [clId, weaponClean]
+        `SELECT id, nombre FROM objetos 
+         WHERE clase_id = $1 
+           AND (LOWER(nombre) = LOWER($2) OR LOWER(REPLACE(REPLACE(nombre, '-', ''), ' ', '')) = LOWER(REPLACE(REPLACE($2, '-', ''), ' ', '')))
+         LIMIT 1`,
+        [clId, finalWeaponName]
       );
+
       if (objRes.rows.length > 0) {
         objId = objRes.rows[0].id;
+        finalWeaponName = objRes.rows[0].nombre;
       } else {
+        isNewWeapon = true;
         const posRes = await client.query(
           'SELECT COALESCE(MAX(posicion), 0) + 1 AS next_pos FROM objetos WHERE clase_id = $1',
           [clId]
         );
         const nextPos = posRes.rows[0]?.next_pos || 1;
         const newObj = await client.query(
-          'INSERT INTO objetos (clase_id, nombre, posicion) VALUES ($1, $2, $3) RETURNING id',
-          [clId, weaponClean, nextPos]
+          'INSERT INTO objetos (clase_id, nombre, posicion) VALUES ($1, $2, $3) RETURNING id, nombre',
+          [clId, finalWeaponName, nextPos]
         );
         objId = newObj.rows[0].id;
+        finalWeaponName = newObj.rows[0].nombre;
       }
 
-      // 5. Insertar código
-      const codeClean = codigoArmero.trim();
+      // 5. Validar y procesar código
+      const codeClean = codigoArmero.trim().toUpperCase();
       const ratingNum = Math.min(5, Math.max(1, Number(calificacion) || 5));
-      const codeRes = await client.query(
-        'INSERT INTO codigos (objeto_id, codigo, calificacion) VALUES ($1, $2, $3) RETURNING id, codigo, calificacion',
-        [objId, codeClean, ratingNum]
+
+      // Verificar si el código ya existe para esta arma
+      const existingCodeRes = await client.query(
+        'SELECT id, codigo, calificacion FROM codigos WHERE objeto_id = $1 AND UPPER(TRIM(codigo)) = UPPER(TRIM($2))',
+        [objId, codeClean]
       );
-      const newCode = codeRes.rows[0];
+
+      let status: 'code_exists' | 'weapon_exists_code_added' | 'created';
+      let message: string;
+      let codeId: number;
+      let finalRating = ratingNum;
+
+      if (existingCodeRes.rows.length > 0) {
+        const existingCode = existingCodeRes.rows[0];
+        codeId = existingCode.id;
+        status = 'code_exists';
+        message = 'Este código de armero ya estaba registrado para esta arma';
+        
+        // Actualizar rating si difiere
+        if (existingCode.calificacion !== ratingNum) {
+          await client.query('UPDATE codigos SET calificacion = $1 WHERE id = $2', [ratingNum, codeId]);
+          finalRating = ratingNum;
+        } else {
+          finalRating = existingCode.calificacion;
+        }
+      } else {
+        const insertRes = await client.query(
+          'INSERT INTO codigos (objeto_id, codigo, calificacion) VALUES ($1, $2, $3) RETURNING id, codigo, calificacion',
+          [objId, codeClean, ratingNum]
+        );
+        codeId = insertRes.rows[0].id;
+
+        if (isNewWeapon) {
+          status = 'created';
+          message = 'Arma y armero registrados con éxito';
+        } else {
+          status = 'weapon_exists_code_added';
+          message = 'Arma existente: el código de armero se guardó';
+        }
+      }
 
       await client.query('COMMIT');
 
-      return {
-        success: true,
+      const loadout = {
         modoId: mId,
         submodoId: smId,
         claseId: clId,
         objetoId: objId,
-        codigoId: newCode.id,
-        codigo: newCode.codigo,
-        calificacion: newCode.calificacion,
-        armaNombre: weaponClean,
+        codigoId: codeId,
+        codigo: codeClean,
+        calificacion: finalRating,
+        armaNombre: finalWeaponName,
         categoria: clClean,
-        submodoNombre: smClean
+        submodoNombre: smClean,
+        isNewWeapon
+      };
+
+      return {
+        success: true,
+        status,
+        message,
+        loadout,
+        ...loadout
       };
     } catch (err) {
       await client.query('ROLLBACK');
